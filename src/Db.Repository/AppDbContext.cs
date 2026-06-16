@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Db.Repository;
 
@@ -7,6 +9,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Product> Products => Set<Product>();
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<OrderDetail> OrderDetails => Set<OrderDetail>();
+    public DbSet<OrderSagaState> OrderSagaStates => Set<OrderSagaState>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -17,6 +20,21 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<Order>()
             .Property(o => o.TotalAmount)
             .HasPrecision(18, 2);
+
+        modelBuilder.Entity<OrderSagaState>(e =>
+        {
+            e.HasKey(s => s.CorrelationId);
+            e.Property(s => s.TotalAmount).HasPrecision(18, 2);
+            e.Property(s => s.ProductIds)
+             .HasConversion(
+                v => string.Join(',', v),
+                v => v.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                       .Select(int.Parse).ToList())
+             .Metadata.SetValueComparer(new ValueComparer<List<int>>(
+                (a, b) => a != null && b != null && a.SequenceEqual(b),
+                v => v.Aggregate(0, (a, i) => HashCode.Combine(a, i)),
+                v => v.ToList()));
+        });
 
         modelBuilder.Entity<OrderDetail>(e =>
         {
