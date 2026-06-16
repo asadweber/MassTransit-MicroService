@@ -1,3 +1,4 @@
+using Db.Repository;
 using MassTransit;
 
 namespace Contracts;
@@ -15,11 +16,12 @@ public static class BusTopologyExtensions
         x.AddBusMetadataExplorer();
 
         // ExcludeFromConfigureEndpoints = topology metadata only, no queues created.
-        // Each real service re-registers its own consumer WITHOUT this flag so its
+        // Each real service re-registers its own type WITHOUT this flag so its
         // queue is created when ConfigureEndpoints is called.
         x.AddConsumer<InventoryConsumer>().ExcludeFromConfigureEndpoints();
         x.AddConsumer<PaymentConsumer>().ExcludeFromConfigureEndpoints();
         x.AddConsumer<NotificationConsumer>().ExcludeFromConfigureEndpoints();
+        x.AddSagaStateMachine<OrderStateMachine, OrderSagaState>().ExcludeFromConfigureEndpoints();
         return x;
     }
 }

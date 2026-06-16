@@ -2,7 +2,7 @@ using Contracts.Message;
 using Db.Repository;
 using MassTransit;
 
-namespace OrderSaga;
+namespace Contracts;
 
 public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
 {

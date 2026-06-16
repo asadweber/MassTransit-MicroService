@@ -2,7 +2,6 @@ using Contracts;
 using Db.Repository;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
-using OrderSaga;
 
 var builder = Host.CreateApplicationBuilder(args);
 
@@ -11,9 +10,9 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddMassTransit(x =>
 {
-    x.AddAllConsumers(); // full topology metadata
+    x.AddAllConsumers(); // full topology metadata (saga excluded from endpoints)
 
-    x.AddSagaStateMachine<OrderStateMachine, OrderSagaState>()
+    x.AddSagaStateMachine<OrderStateMachine, OrderSagaState>() // re-register: this service owns the saga queue
      .EntityFrameworkRepository(r =>
      {
          r.ConcurrencyMode = ConcurrencyMode.Optimistic;
