@@ -1,7 +1,8 @@
 namespace Contracts.Message;
 
-public record CheckInventory(
-    Guid CorrelationId,
-    int OrderId,
-    List<int> ProductIds
-);
+public class CheckInventory
+{
+    public Guid CorrelationId { get; set; }
+    public int OrderId { get; set; }
+    public List<int> ProductIds { get; set; } = [];
+}

@@ -1,5 +1,6 @@
 namespace Contracts.Dto;
 
+[Serializable]
 public class OrderDto
 {
     public int Id { get; set; }

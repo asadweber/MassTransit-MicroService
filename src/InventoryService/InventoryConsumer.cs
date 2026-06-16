@@ -14,9 +14,11 @@ public class InventoryConsumer(ILogger<InventoryConsumer> logger) : IConsumer<Ch
         // TODO: real inventory check logic
         var isAvailable = true;
 
-        await context.Publish(new InventoryChecked(
-            msg.CorrelationId,
-            msg.OrderId,
-            isAvailable));
+        await context.Publish(new InventoryChecked
+        {
+            CorrelationId = msg.CorrelationId,
+            OrderId = msg.OrderId,
+            IsAvailable = isAvailable
+        });
     }
 }

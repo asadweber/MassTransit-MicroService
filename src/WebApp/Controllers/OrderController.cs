@@ -51,7 +51,7 @@ public class OrderController(AppDbContext db, IPublishEndpoint bus, IMapper mapp
         db.Orders.Add(order);
         await db.SaveChangesAsync();
 
-        await bus.Publish(new OrderCreated(mapper.Map<OrderDto>(order)));
+        await bus.Publish(new OrderCreated { Order = mapper.Map<OrderDto>(order) });
 
         return CreatedAtAction(nameof(GetById), new { id = order.Id }, mapper.Map<OrderDto>(order));
     }

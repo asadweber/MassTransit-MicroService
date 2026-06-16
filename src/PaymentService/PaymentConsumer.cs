@@ -14,9 +14,11 @@ public class PaymentConsumer(ILogger<PaymentConsumer> logger) : IConsumer<Proces
         // TODO: real payment processing logic
         var isSuccess = true;
 
-        await context.Publish(new PaymentProcessed(
-            msg.CorrelationId,
-            msg.OrderId,
-            isSuccess));
+        await context.Publish(new PaymentProcessed
+        {
+            CorrelationId = msg.CorrelationId,
+            OrderId = msg.OrderId,
+            IsSuccess = isSuccess
+        });
     }
 }

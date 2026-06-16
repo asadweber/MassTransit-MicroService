@@ -39,18 +39,22 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                     ctx.Saga.ProductIds = ctx.Message.Order.OrderDetails
                         .Select(d => d.ProductId).ToList();
                 })
-                .PublishAsync(ctx => ctx.Init<CheckInventory>(new CheckInventory(
-                    ctx.Saga.CorrelationId,
-                    ctx.Saga.OrderId,
-                    ctx.Saga.ProductIds)))
+                .PublishAsync(ctx => ctx.Init<CheckInventory>(new CheckInventory
+                {
+                    CorrelationId = ctx.Saga.CorrelationId,
+                    OrderId = ctx.Saga.OrderId,
+                    ProductIds = ctx.Saga.ProductIds
+                }))
                 .TransitionTo(CheckingInventory));
 
         During(CheckingInventory,
             When(InventoryChecked, x => x.Message.IsAvailable)
-                .PublishAsync(ctx => ctx.Init<ProcessPayment>(new ProcessPayment(
-                    ctx.Saga.CorrelationId,
-                    ctx.Saga.OrderId,
-                    ctx.Saga.TotalAmount)))
+                .PublishAsync(ctx => ctx.Init<ProcessPayment>(new ProcessPayment
+                {
+                    CorrelationId = ctx.Saga.CorrelationId,
+                    OrderId = ctx.Saga.OrderId,
+                    Amount = ctx.Saga.TotalAmount
+                }))
                 .TransitionTo(ProcessingPayment),
 
             When(InventoryChecked, x => !x.Message.IsAvailable)
@@ -58,11 +62,13 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
 
         During(ProcessingPayment,
             When(PaymentProcessed, x => x.Message.IsSuccess)
-                .PublishAsync(ctx => ctx.Init<OrderConfirmed>(new OrderConfirmed(
-                    ctx.Saga.CorrelationId,
-                    ctx.Saga.OrderId,
-                    ctx.Saga.CustomerName,
-                    ctx.Saga.TotalAmount)))
+                .PublishAsync(ctx => ctx.Init<OrderConfirmed>(new OrderConfirmed
+                {
+                    CorrelationId = ctx.Saga.CorrelationId,
+                    OrderId = ctx.Saga.OrderId,
+                    CustomerName = ctx.Saga.CustomerName,
+                    TotalAmount = ctx.Saga.TotalAmount
+                }))
                 .TransitionTo(Confirmed)
                 .Finalize(),
 

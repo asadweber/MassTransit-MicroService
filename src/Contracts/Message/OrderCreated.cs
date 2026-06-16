@@ -2,4 +2,7 @@ using Contracts.Dto;
 
 namespace Contracts.Message;
 
-public record OrderCreated(OrderDto Order);
+public class OrderCreated
+{
+    public OrderDto Order { get; set; } = new();
+}

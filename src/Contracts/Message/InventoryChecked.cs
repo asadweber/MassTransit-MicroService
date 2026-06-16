@@ -1,7 +1,8 @@
 namespace Contracts.Message;
 
-public record InventoryChecked(
-    Guid CorrelationId,
-    int OrderId,
-    bool IsAvailable
-);
+public class InventoryChecked
+{
+    public Guid CorrelationId { get; set; }
+    public int OrderId { get; set; }
+    public bool IsAvailable { get; set; }
+}
