@@ -5,8 +5,6 @@ using Db.Repository;
 using MassTransit;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Swashbuckle.AspNetCore.Filters;
-using WebApp.Swagger;
 
 namespace WebApp.Controllers;
 
@@ -37,7 +35,7 @@ public class OrderController(AppDbContext db, IPublishEndpoint bus, IMapper mapp
     }
 
     [HttpPost]
-    [SwaggerRequestExample(typeof(OrderDto), typeof(OrderDtoExample))]
+    //[SwaggerRequestExample(typeof(OrderDto), typeof(OrderDtoExample))]
     public async Task<IActionResult> Create(OrderDto request)
     {
         var order = mapper.Map<Order>(request);
