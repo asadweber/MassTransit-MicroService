@@ -1,6 +1,8 @@
+using AutoMapper;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Db.Repository;
+using WebApp.Mappings;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,6 +26,8 @@ builder.Services.AddMassTransit(x =>
         cfg.ConfigureEndpoints(ctx);
     });
 });
+
+builder.Services.AddAutoMapper(typeof(MapperProfile).Assembly);
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
