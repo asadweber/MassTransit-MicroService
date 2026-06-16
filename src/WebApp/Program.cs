@@ -1,3 +1,4 @@
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Db.Repository;
 
@@ -8,6 +9,21 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(
         builder.Configuration.GetConnectionString("DefaultConnection"),
         b => b.MigrationsAssembly("WebApp")));
+
+builder.Services.AddMassTransit(x =>
+{
+    x.UsingRabbitMq((ctx, cfg) =>
+    {
+        var rmq = builder.Configuration.GetSection("RabbitMQ");
+        cfg.Host(rmq["Host"], rmq["VirtualHost"], h =>
+        {
+            h.Username(rmq["Username"]!);
+            h.Password(rmq["Password"]!);
+        });
+
+        cfg.ConfigureEndpoints(ctx);
+    });
+});
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle

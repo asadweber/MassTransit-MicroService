@@ -1,4 +1,6 @@
+using Contracts;
 using Db.Repository;
+using MassTransit;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -6,7 +8,7 @@ namespace WebApp.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class OrderController(AppDbContext db) : ControllerBase
+public class OrderController(AppDbContext db, IPublishEndpoint bus) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> GetAll()
@@ -42,6 +44,14 @@ public class OrderController(AppDbContext db) : ControllerBase
 
         db.Orders.Add(order);
         await db.SaveChangesAsync();
+
+        await bus.Publish(new OrderCreated(
+            order.Id,
+            order.CustomerName,
+            order.OrderDate,
+            order.TotalAmount,
+            order.Status));
+
         return CreatedAtAction(nameof(GetById), new { id = order.Id }, order);
     }
 
