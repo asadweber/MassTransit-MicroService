@@ -9,11 +9,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
 
-namespace WebApp.Migrations
+namespace Db.Repository.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260616122127_AddOrderDetails")]
-    partial class AddOrderDetails
+    [Migration("20260616130628_Init")]
+    partial class Init
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
