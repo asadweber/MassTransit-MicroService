@@ -1,6 +1,6 @@
 using Contracts.Dto;
 
-namespace Contracts.Message;
+namespace Contracts.Messages;
 
 public class OrderCreated
 {

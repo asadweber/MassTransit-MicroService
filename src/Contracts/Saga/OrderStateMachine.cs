@@ -1,8 +1,8 @@
-using Contracts.Message;
+using Contracts.Messages;
 using Db.Repository;
 using MassTransit;
 
-namespace Contracts;
+namespace Contracts.Saga;
 
 public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
 {

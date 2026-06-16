@@ -1,8 +1,8 @@
-using Contracts.Message;
+using Contracts.Messages;
 using MassTransit;
 using Microsoft.Extensions.Logging;
 
-namespace Contracts;
+namespace Contracts.Consumers;
 
 public class NotificationConsumer(ILogger<NotificationConsumer> logger) : IConsumer<OrderConfirmed>
 {

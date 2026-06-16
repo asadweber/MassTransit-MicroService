@@ -1,6 +1,6 @@
 using AutoMapper;
 using Contracts.Dto;
-using Contracts.Message;
+using Contracts.Messages;
 using Db.Repository;
 using MassTransit;
 using Microsoft.AspNetCore.Mvc;

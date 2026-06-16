@@ -1,4 +1,5 @@
 using Contracts;
+using Contracts.Consumers;
 using MassTransit;
 
 var builder = Host.CreateApplicationBuilder(args);
