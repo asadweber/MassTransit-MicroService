@@ -1,9 +1,10 @@
 using AutoMapper;
+using Db.Repository;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
-using Db.Repository;
 using Swashbuckle.AspNetCore.Filters;
 using WebApp.Mappings;
+using WebApp.Services;
 using WebApp.Swagger;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -39,6 +40,7 @@ builder.Services.AddMassTransitDashboard(options =>
     options.Flow.Enabled = true;
 });
 
+builder.Services.AddSingleton<OrderSimulatorService>();
 
 builder.Services.AddAutoMapper(typeof(MapperProfile).Assembly);
 
