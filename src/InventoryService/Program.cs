@@ -1,14 +1,12 @@
 using Contracts;
-using InventoryService;
 using MassTransit;
 
 var builder = Host.CreateApplicationBuilder(args);
 
 builder.Services.AddMassTransit(x =>
 {
-    x.AddBusMetadataExplorer();
-
-    x.AddConsumer<InventoryConsumer>();
+    x.AddAllConsumers();             // full topology metadata (all consumers excluded from endpoints)
+    x.AddConsumer<InventoryConsumer>(); // re-register: this service owns this queue
 
     x.UsingRabbitMq((ctx, cfg) =>
     {

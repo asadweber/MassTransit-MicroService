@@ -1,3 +1,4 @@
+using Contracts;
 using Db.Repository;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
@@ -10,7 +11,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddMassTransit(x =>
 {
-    x.AddBusMetadataExplorer();
+    x.AddAllConsumers(); // full topology metadata
 
     x.AddSagaStateMachine<OrderStateMachine, OrderSagaState>()
      .EntityFrameworkRepository(r =>

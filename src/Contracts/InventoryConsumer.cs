@@ -1,7 +1,8 @@
 using Contracts.Message;
 using MassTransit;
+using Microsoft.Extensions.Logging;
 
-namespace InventoryService;
+namespace Contracts;
 
 public class InventoryConsumer(ILogger<InventoryConsumer> logger) : IConsumer<CheckInventory>
 {

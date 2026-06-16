@@ -18,7 +18,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddMassTransit(x =>
 {
-    x.AddBusMetadataExplorer();
+    x.AddAllConsumers(); // registers full topology for dashboard — no endpoints created below
 
     x.UsingRabbitMq((ctx, cfg) =>
     {
@@ -32,7 +32,7 @@ builder.Services.AddMassTransit(x =>
         cfg.UseNewtonsoftJsonSerializer();
         cfg.UseNewtonsoftJsonDeserializer();
 
-        cfg.ConfigureEndpoints(ctx);
+        // WebApp is publish-only — no ConfigureEndpoints so no queues are created here
     });
 });
 

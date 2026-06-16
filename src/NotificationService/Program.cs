@@ -1,13 +1,12 @@
+using Contracts;
 using MassTransit;
-using NotificationService;
 
 var builder = Host.CreateApplicationBuilder(args);
 
 builder.Services.AddMassTransit(x =>
 {
-    x.AddBusMetadataExplorer();
-
-    x.AddConsumer<NotificationConsumer>();
+    x.AddAllConsumers();                  // full topology metadata (all consumers excluded from endpoints)
+    x.AddConsumer<NotificationConsumer>(); // re-register: this service owns this queue
 
     x.UsingRabbitMq((ctx, cfg) =>
     {
