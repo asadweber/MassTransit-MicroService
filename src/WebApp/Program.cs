@@ -40,7 +40,7 @@ builder.Services.AddMassTransitDashboard(options =>
     options.Flow.Enabled = true;
 });
 
-builder.Services.AddSingleton<OrderSimulatorService>();
+builder.Services.AddHostedService<OrderSimulatorService>();
 
 builder.Services.AddAutoMapper(typeof(MapperProfile).Assembly);
 
