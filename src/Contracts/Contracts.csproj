@@ -7,6 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="MassTransit" Version="9.2.0-develop.150" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Db.Repository\Db.Repository.csproj" />
   </ItemGroup>
 

@@ -1,4 +1,5 @@
 using AutoMapper;
+using Contracts;
 using Db.Repository;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
@@ -17,7 +18,19 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddMassTransit(x =>
 {
-    x.AddBusMetadataExplorer();   
+    x.AddBusMetadataExplorer();
+    x.AddConsumer<InventoryConsumer>();
+    x.AddConsumer<NotificationConsumer>();
+    x.AddConsumer<PaymentConsumer>();
+
+    x.AddSagaStateMachine<OrderStateMachine, OrderSagaState>()
+    .EntityFrameworkRepository(r =>
+    {
+        r.ConcurrencyMode = ConcurrencyMode.Optimistic;
+        r.ExistingDbContext<AppDbContext>();
+        r.UseSqlServer();
+    });
+
     x.UsingRabbitMq((ctx, cfg) =>
     {
         var rmq = builder.Configuration.GetSection("RabbitMQ");
