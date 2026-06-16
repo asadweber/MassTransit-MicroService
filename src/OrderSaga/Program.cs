@@ -2,7 +2,6 @@ using Db.Repository;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using OrderSaga;
-using OrderSaga.Consumers;
 
 var builder = Host.CreateApplicationBuilder(args);
 
@@ -18,10 +17,6 @@ builder.Services.AddMassTransit(x =>
          r.ExistingDbContext<AppDbContext>();
          r.UseSqlServer();
      });
-
-    x.AddConsumer<InventoryConsumer>();
-    x.AddConsumer<PaymentConsumer>();
-    x.AddConsumer<NotificationConsumer>();
 
     x.UsingRabbitMq((ctx, cfg) =>
     {
