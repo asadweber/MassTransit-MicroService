@@ -20,10 +20,10 @@ public static class BusTopologyExtensions
         // ExcludeFromConfigureEndpoints = topology metadata only, no queues created.
         // Each real service re-registers its own type WITHOUT this flag so its
         // queue is created when ConfigureEndpoints is called.
-        x.AddConsumer<InventoryConsumer>().ExcludeFromConfigureEndpoints();
-        x.AddConsumer<PaymentConsumer>().ExcludeFromConfigureEndpoints();
-        x.AddConsumer<NotificationConsumer>().ExcludeFromConfigureEndpoints();
-        x.AddSagaStateMachine<OrderStateMachine, OrderSagaState>().ExcludeFromConfigureEndpoints();
+        x.AddConsumer<InventoryConsumer, InventoryConsumerDefinition>().ExcludeFromConfigureEndpoints();
+        x.AddConsumer<PaymentConsumer, PaymentConsumerDefinition>().ExcludeFromConfigureEndpoints();
+        x.AddConsumer<NotificationConsumer, NotificationConsumerDefinition>().ExcludeFromConfigureEndpoints();
+        x.AddSagaStateMachine<OrderStateMachine, OrderSagaState, OrderSagaDefinition>().ExcludeFromConfigureEndpoints();
         return x;
     }
 }

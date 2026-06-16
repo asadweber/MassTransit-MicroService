@@ -13,7 +13,7 @@ builder.Services.AddMassTransit(x =>
 {
     x.AddAllConsumers(); // full topology metadata (saga excluded from endpoints)
 
-    x.AddSagaStateMachine<OrderStateMachine, OrderSagaState>() // re-register: this service owns the saga queue
+    x.AddSagaStateMachine<OrderStateMachine, OrderSagaState, OrderSagaDefinition>() // re-register: this service owns the saga queue
      .EntityFrameworkRepository(r =>
      {
          r.ConcurrencyMode = ConcurrencyMode.Optimistic;

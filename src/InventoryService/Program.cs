@@ -7,7 +7,7 @@ var builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddMassTransit(x =>
 {
     x.AddAllConsumers();             // full topology metadata (all consumers excluded from endpoints)
-    x.AddConsumer<InventoryConsumer>(); // re-register: this service owns this queue
+    x.AddConsumer<InventoryConsumer, InventoryConsumerDefinition>(); // re-register: this service owns this queue
 
     x.UsingRabbitMq((ctx, cfg) =>
     {

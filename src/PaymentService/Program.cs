@@ -7,7 +7,7 @@ var builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddMassTransit(x =>
 {
     x.AddAllConsumers();            // full topology metadata (all consumers excluded from endpoints)
-    x.AddConsumer<PaymentConsumer>(); // re-register: this service owns this queue
+    x.AddConsumer<PaymentConsumer, PaymentConsumerDefinition>(); // re-register: this service owns this queue
 
     x.UsingRabbitMq((ctx, cfg) =>
     {
