@@ -16,6 +16,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddMassTransit(x =>
 {
+    x.AddBusMetadataExplorer();   
     x.UsingRabbitMq((ctx, cfg) =>
     {
         var rmq = builder.Configuration.GetSection("RabbitMQ");
@@ -67,6 +68,6 @@ app.UseAuthorization();
 app.MapControllers();
 
 //masstransit
-//app.UseMassTransitDashboard();
+app.UseMassTransitDashboard();
 
 app.Run();
