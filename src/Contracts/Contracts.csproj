@@ -14,4 +14,8 @@
     <ProjectReference Include="..\Db.Repository\Db.Repository.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Messages\Commands\" />
+  </ItemGroup>
+
 </Project>

@@ -1,6 +1,7 @@
 using AutoMapper;
 using Contracts.Dto;
 using Contracts.Messages;
+using Contracts.Messages.Events;
 using Db.Repository;
 using MassTransit;
 using Microsoft.AspNetCore.Mvc;
@@ -46,10 +47,15 @@ public class OrderController(AppDbContext db, IPublishEndpoint bus, IMapper mapp
 
         order.TotalAmount = order.OrderDetails.Sum(d => d.Total);
 
-        db.Orders.Add(order);
-        await db.SaveChangesAsync();
+        await using var tx = await db.Database.BeginTransactionAsync();
 
-        await bus.Publish(new OrderCreated { Order = mapper.Map<OrderDto>(order) });
+        db.Orders.Add(order);
+        await db.SaveChangesAsync();                                         // saves Order row
+
+        await bus.Publish(new OrderCreated { Order = mapper.Map<OrderDto>(order) }); // writes to OutboxMessage
+        await db.SaveChangesAsync();                                         // flushes outbox row
+
+        await tx.CommitAsync();                                              // both rows commit atomically
 
         return CreatedAtAction(nameof(GetById), new { id = order.Id }, mapper.Map<OrderDto>(order));
     }

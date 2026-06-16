@@ -1,4 +1,5 @@
 using Contracts.Messages;
+using Contracts.Messages.Events;
 using Db.Repository;
 using MassTransit;
 
