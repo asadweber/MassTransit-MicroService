@@ -1,4 +1,5 @@
 using Contracts;
+using InventoryService;
 using MassTransit;
 
 var builder = Host.CreateApplicationBuilder(args);

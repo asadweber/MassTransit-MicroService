@@ -19,17 +19,6 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddMassTransit(x =>
 {
     x.AddBusMetadataExplorer();
-    x.AddConsumer<InventoryConsumer>();
-    x.AddConsumer<NotificationConsumer>();
-    x.AddConsumer<PaymentConsumer>();
-
-    x.AddSagaStateMachine<OrderStateMachine, OrderSagaState>()
-    .EntityFrameworkRepository(r =>
-    {
-        r.ConcurrencyMode = ConcurrencyMode.Optimistic;
-        r.ExistingDbContext<AppDbContext>();
-        r.UseSqlServer();
-    });
 
     x.UsingRabbitMq((ctx, cfg) =>
     {
