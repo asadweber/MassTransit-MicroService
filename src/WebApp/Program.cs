@@ -68,11 +68,4 @@ app.MapControllers();
 //masstransit
 app.UseMassTransitDashboard();
 
-// Auto migrate on startup
-using (var scope = app.Services.CreateScope())
-{
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    await db.Database.MigrateAsync();
-}
-
 app.Run();
