@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Db.Repository.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260616130628_Init")]
+    [Migration("20260616153915_Init")]
     partial class Init
     {
         /// <inheritdoc />
@@ -20,7 +20,7 @@ namespace Db.Repository.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.6")
+                .HasAnnotation("ProductVersion", "10.0.9")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -87,6 +87,39 @@ namespace Db.Repository.Migrations
                     b.ToTable("OrderDetails");
                 });
 
+            modelBuilder.Entity("Db.Repository.OrderSagaState", b =>
+                {
+                    b.Property<Guid>("CorrelationId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("CurrentState")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("CustomerName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("OrderId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ProductIds")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("TotalAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("int");
+
+                    b.HasKey("CorrelationId");
+
+                    b.ToTable("OrderSagaStates");
+                });
+
             modelBuilder.Entity("Db.Repository.Product", b =>
                 {
                     b.Property<int>("Id")
@@ -109,6 +142,43 @@ namespace Db.Repository.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Products");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Name = "Laptop",
+                            Price = 999.99m,
+                            Stock = 50
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Name = "Wireless Mouse",
+                            Price = 29.99m,
+                            Stock = 200
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Name = "USB-C Hub",
+                            Price = 49.99m,
+                            Stock = 150
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Name = "Mechanical Keyboard",
+                            Price = 89.99m,
+                            Stock = 75
+                        },
+                        new
+                        {
+                            Id = 5,
+                            Name = "Monitor 27\"",
+                            Price = 349.99m,
+                            Stock = 30
+                        });
                 });
 
             modelBuilder.Entity("Db.Repository.OrderDetail", b =>
