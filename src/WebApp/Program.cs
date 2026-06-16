@@ -32,6 +32,11 @@ builder.Services.AddMassTransit(x =>
     });
 });
 
+builder.Services.AddMassTransitDashboard(options =>
+{
+    options.Metrics.Enabled = true;
+    options.Flow.Enabled = true;
+});
 
 
 builder.Services.AddAutoMapper(typeof(MapperProfile).Assembly);
@@ -43,11 +48,7 @@ builder.Services.AddSwaggerGen(c => c.ExampleFilters());
 builder.Services.AddSwaggerExamplesFromAssemblyOf<OrderDtoExample>();
 
 
-builder.Services.AddMassTransitDashboard(options =>
-{
-    options.Metrics.Enabled = true;
-    options.Flow.Enabled = true;
-});
+
 
 
 var app = builder.Build();
@@ -66,6 +67,6 @@ app.UseAuthorization();
 app.MapControllers();
 
 //masstransit
-app.UseMassTransitDashboard();
+//app.UseMassTransitDashboard();
 
 app.Run();
