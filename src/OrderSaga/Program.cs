@@ -10,6 +10,8 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddMassTransit(x =>
 {
+    x.AddBusMetadataExplorer();
+
     x.AddSagaStateMachine<OrderStateMachine, OrderSagaState>()
      .EntityFrameworkRepository(r =>
      {

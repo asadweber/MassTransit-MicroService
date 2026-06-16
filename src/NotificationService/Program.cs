@@ -5,6 +5,8 @@ var builder = Host.CreateApplicationBuilder(args);
 
 builder.Services.AddMassTransit(x =>
 {
+    x.AddBusMetadataExplorer();
+
     x.AddConsumer<NotificationConsumer>();
 
     x.UsingRabbitMq((ctx, cfg) =>
