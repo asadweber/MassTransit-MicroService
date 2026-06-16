@@ -27,6 +27,9 @@ builder.Services.AddMassTransit(x =>
             h.Password(rmq["Password"]!);
         });
 
+        cfg.UseNewtonsoftJsonSerializer();
+        cfg.UseNewtonsoftJsonDeserializer();
+
         cfg.ConfigureEndpoints(ctx);
     });
 });

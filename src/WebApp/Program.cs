@@ -25,8 +25,17 @@ builder.Services.AddMassTransit(x =>
             h.Password(rmq["Password"]!);
         });
 
+        cfg.UseNewtonsoftJsonSerializer();
+        cfg.UseNewtonsoftJsonDeserializer();
+
         cfg.ConfigureEndpoints(ctx);
     });
+});
+
+builder.Services.AddMassTransitDashboard(options =>
+{
+    options.Metrics.Enabled = true;
+    options.Flow.Enabled = true;
 });
 
 builder.Services.AddAutoMapper(typeof(MapperProfile).Assembly);
@@ -51,6 +60,8 @@ app.UseHttpsRedirection();
 app.UseAuthorization();
 
 app.MapControllers();
+
+app.UseMassTransitDashboard();
 
 // Auto migrate on startup
 using (var scope = app.Services.CreateScope())
