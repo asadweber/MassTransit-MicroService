@@ -48,23 +48,7 @@ public class OrderController(AppDbContext db, IPublishEndpoint bus, IMapper mapp
         db.Orders.Add(order);
         await db.SaveChangesAsync();
 
-        await db.Entry(order).Collection(o => o.OrderDetails).Query()
-            .Include(d => d.Product)
-            .LoadAsync();
-
-        await bus.Publish(new OrderCreated(
-            order.Id,
-            order.CustomerName,
-            order.OrderDate,
-            order.TotalAmount,
-            order.Status,
-            order.OrderDetails.Select(d => new OrderDetailDto
-            {
-                ProductId = d.ProductId,
-                OrderQty = d.OrderQty,
-                UnitPrice = d.UnitPrice,
-                Total = d.Total
-            }).ToList()));
+        await bus.Publish(new OrderCreated(mapper.Map<OrderDto>(order)));
 
         return CreatedAtAction(nameof(GetById), new { id = order.Id }, mapper.Map<OrderDto>(order));
     }
