@@ -50,13 +50,13 @@ public class OrderController(AppDbContext db, IPublishEndpoint bus, IMapper mapp
 
         await using var tx = await db.Database.BeginTransactionAsync();
 
-        db.Orders.Add(order);                                               // stage Order
+        db.Orders.Add(order);
+        await db.SaveChangesAsync();                                        // 1️⃣ order.Id assigned by DB
 
-        await bus.Publish(new OrderCreated { Order = mapper.Map<OrderDto>(order) }); // stage OutboxMessage
+        await bus.Publish(new OrderCreated { Order = mapper.Map<OrderDto>(order) }); // Id is valid ✅
+        await db.SaveChangesAsync();                                        // 2️⃣ flush OutboxMessage row
 
-        await db.SaveChangesAsync();                                        // flush both in ONE call
-
-        await tx.CommitAsync();                                             // commit atomically
+        await tx.CommitAsync();                                             // both rows commit atomically
 
         return CreatedAtAction(nameof(GetById), new { id = order.Id }, mapper.Map<OrderDto>(order));
     }
