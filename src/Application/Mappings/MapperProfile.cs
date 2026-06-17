@@ -1,8 +1,8 @@
 using AutoMapper;
 using Contracts.Dto;
-using Db.Repository;
+using Domain.Entities;
 
-namespace WebApp.Mappings;
+namespace Application.Mappings;
 
 public class MapperProfile : Profile
 {
