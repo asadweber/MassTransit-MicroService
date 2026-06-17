@@ -11,5 +11,7 @@ public class OrderSagaDefinition : SagaDefinition<OrderSagaState>
         IRegistrationContext context)
     {
         endpointConfigurator.UseMessageRetry(r => r.Interval(3, TimeSpan.FromSeconds(5)));
+        // ✅ Transactional Outbox (SQL Server via EF Core)
+        endpointConfigurator.UseEntityFrameworkOutbox<AppDbContext>(context);
     }
 }

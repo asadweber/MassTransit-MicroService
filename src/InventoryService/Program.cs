@@ -1,5 +1,6 @@
 using Contracts;
 using Contracts.Consumers;
+using Db.Repository;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
 
@@ -33,7 +34,9 @@ builder.Services.AddMassTransit(x =>
 
             //e.UseInMemoryOutbox(ctx);
 
-            // 3️⃣ Consumer last
+            
+
+            // 3️ Consumer last
             e.ConfigureConsumer<InventoryConsumer>(ctx);
         });
 

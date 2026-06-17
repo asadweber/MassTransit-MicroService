@@ -1,3 +1,4 @@
+using Db.Repository;
 using MassTransit;
 
 namespace Contracts.Consumers;
@@ -11,5 +12,7 @@ public class NotificationConsumerDefinition : ConsumerDefinition<NotificationCon
     {
         endpointConfigurator.UseMessageRetry(r =>
             r.Incremental(5, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5)));
+        // ✅ Transactional Outbox (SQL Server via EF Core)
+        endpointConfigurator.UseEntityFrameworkOutbox<AppDbContext>(context);
     }
 }
