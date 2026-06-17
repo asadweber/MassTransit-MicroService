@@ -14,10 +14,6 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApplication();
 
-var mongoSection = builder.Configuration.GetSection("MongoDb");
-
-builder.Services.AddSingleton<IMongoClient>(_ =>
-    new MongoClient(mongoSection["ConnectionString"]));
 
 builder.Services.AddMassTransit(x =>
 {
