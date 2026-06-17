@@ -20,8 +20,7 @@ namespace Application.Messaging.Saga
                     TimeSpan.FromSeconds(30)
                 ));
 
-            // ✅ Atomic with saga state DB save
-            endpointConfigurator.UseEntityFrameworkOutbox<AppDbContext>(context);
+            //endpointConfigurator.UseMongoDbOutbox(context);
         }
     }
 }

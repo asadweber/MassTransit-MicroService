@@ -34,16 +34,12 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                 .Then(ctx =>
                 {
                     ctx.Saga.OrderId = ctx.Message.Order.Id;
-                    ctx.Saga.CustomerName = ctx.Message.Order.CustomerName;
-                    ctx.Saga.TotalAmount = ctx.Message.Order.TotalAmount;
-                    //ctx.Saga.ProductIds = ctx.Message.Order.OrderDetails
-                    //    .Select(d => d.ProductId).ToList();
+                   
                 })
                 .PublishAsync(ctx => ctx.Init<CheckInventory>(new CheckInventory
                 {
                     CorrelationId = ctx.Saga.CorrelationId,
                     OrderId = ctx.Saga.OrderId,
-                    //ProductIds = ctx.Saga.ProductIds
                 }))
                 .TransitionTo(CheckingInventory));
 
@@ -53,7 +49,6 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                 {
                     CorrelationId = ctx.Saga.CorrelationId,
                     OrderId = ctx.Saga.OrderId,
-                    Amount = ctx.Saga.TotalAmount
                 }))
                 .TransitionTo(ProcessingPayment),
 
@@ -66,8 +61,6 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                 {
                     CorrelationId = ctx.Saga.CorrelationId,
                     OrderId = ctx.Saga.OrderId,
-                    CustomerName = ctx.Saga.CustomerName,
-                    TotalAmount = ctx.Saga.TotalAmount
                 }))
                 .TransitionTo(Confirmed)
                 .Finalize(),
