@@ -53,8 +53,8 @@ builder.Services.AddMassTransit(x =>
         {
             e.Durable = true;
             e.AutoDelete = false;
-            e.PrefetchCount = 16;
-            e.ConcurrentMessageLimit = 8;
+            e.PrefetchCount = 64;
+            e.ConcurrentMessageLimit = 32;
 
             // ✅ Retry — Wait time increases exponentially.
             /*
