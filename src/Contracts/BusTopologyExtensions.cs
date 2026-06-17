@@ -18,13 +18,13 @@ public static class BusTopologyExtensions
     {
         x.AddBusMetadataExplorer();
 
-        x.AddConsumer<InventoryConsumer, InventoryConsumerDefinition>()
+        x.AddConsumer<InventoryConsumer>()
             .ExcludeFromConfigureEndpoints();
 
-        x.AddConsumer<PaymentConsumer, PaymentConsumerDefinition>()
+        x.AddConsumer<PaymentConsumer>()
             .ExcludeFromConfigureEndpoints();
 
-        x.AddConsumer<NotificationConsumer, NotificationConsumerDefinition>()
+        x.AddConsumer<NotificationConsumer>()
             .ExcludeFromConfigureEndpoints();
 
         // ✅ Only attach EF repository when this service owns the saga

@@ -1,17 +1,27 @@
-using Db.Repository;
+﻿using Db.Repository;
 using MassTransit;
+using System;
+using System.Collections.Generic;
+using System.Text;
 
-namespace Contracts.Saga;
-
-public class OrderSagaDefinition : SagaDefinition<OrderSagaState>
+namespace Contracts.Saga
 {
-    protected override void ConfigureSaga(
-        IReceiveEndpointConfigurator endpointConfigurator,
-        ISagaConfigurator<OrderSagaState> sagaConfigurator,
-        IRegistrationContext context)
+    public class OrderSagaDefinition : SagaDefinition<OrderSagaState>
     {
-        endpointConfigurator.UseMessageRetry(r => r.Interval(3, TimeSpan.FromSeconds(5)));
-        // ✅ Transactional Outbox (SQL Server via EF Core)
-        endpointConfigurator.UseEntityFrameworkOutbox<AppDbContext>(context);
+        protected override void ConfigureSaga(
+            IReceiveEndpointConfigurator endpointConfigurator,
+            ISagaConfigurator<OrderSagaState> sagaConfigurator,
+            IRegistrationContext context)
+        {
+            endpointConfigurator.UseMessageRetry(r =>
+                r.Intervals(
+                    TimeSpan.FromSeconds(5),
+                    TimeSpan.FromSeconds(15),
+                    TimeSpan.FromSeconds(30)
+                ));
+
+            // ✅ Atomic with saga state DB save
+            endpointConfigurator.UseEntityFrameworkOutbox<AppDbContext>(context);
+        }
     }
 }

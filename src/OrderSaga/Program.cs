@@ -18,6 +18,13 @@ builder.Services.AddMassTransit(x =>
         r.UseSqlServer();
     });
 
+    // ✅ Required for outbox — starts background SQL poller
+    x.AddEntityFrameworkOutbox<AppDbContext>(o =>
+    {
+        o.UseSqlServer();
+        o.UseBusOutbox();
+        o.QueryDelay = TimeSpan.FromSeconds(1);
+    });
 
     x.UsingRabbitMq((ctx, cfg) =>
     {

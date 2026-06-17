@@ -9,7 +9,13 @@ var builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddMassTransit(x =>
 {
     x.AddAllConsumers();             // full topology metadata (all consumers excluded from endpoints)
-    //x.AddConsumer<InventoryConsumer, InventoryConsumerDefinition>(); // re-register: this service owns this queue
+                                     // ✅ Required for UseEntityFrameworkOutbox to function + starts background poller
+    x.AddEntityFrameworkOutbox<AppDbContext>(o =>
+    {
+        o.UseSqlServer();
+        o.UseBusOutbox();
+        o.QueryDelay = TimeSpan.FromSeconds(1);
+    });
 
     x.UsingRabbitMq((ctx, cfg) =>
     {
@@ -23,20 +29,26 @@ builder.Services.AddMassTransit(x =>
         cfg.UseNewtonsoftJsonSerializer();
         cfg.UseNewtonsoftJsonDeserializer();
 
-        // ✅ Manually declare the endpoint so this service "owns" the queue
+        // ✅ Manual endpoint — Inventory Service owns this queue
         cfg.ReceiveEndpoint("inventory-queue", e =>
         {
-            //1️ Queue/exchange properties
             e.Durable = true;
             e.AutoDelete = false;
             e.PrefetchCount = 16;
             e.ConcurrentMessageLimit = 8;
 
-            //e.UseInMemoryOutbox(ctx);
+            // ✅ Retry — outermost, wraps everything
+            e.UseMessageRetry(r =>
+                r.Intervals(
+                    TimeSpan.FromSeconds(5),
+                    TimeSpan.FromSeconds(15),
+                    TimeSpan.FromSeconds(30)
+                ));
 
-            
+            // ✅ Outbox — inner, atomic with DB transaction
+            e.UseEntityFrameworkOutbox<AppDbContext>(ctx);
 
-            // 3️ Consumer last
+            // ✅ Consumer — always last
             e.ConfigureConsumer<InventoryConsumer>(ctx);
         });
 
