@@ -1,2 +1,2 @@
-dotnet ef migrations add Init --project src/Db.Repository --startup-project src/WebApp
-dotnet ef database update --project src/Db.Repository --startup-project src/WebApp
+dotnet ef migrations add Init --project src/Infrastructure --startup-project src/WebApp
+dotnet ef database update --project src/Infrastructure --startup-project src/WebApp

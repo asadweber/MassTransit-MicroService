@@ -42,7 +42,7 @@ E-commerce order lifecycle: a customer order is created → inventory is checked
 - **Microservices**: `WebApp`, `OrderSaga`, `InventoryService`, `PaymentService`, `NotificationService` are independently runnable processes, each with its own `Program.cs`/host and `appsettings.json`.
 - **Event-Driven**: services communicate exclusively via asynchronous messages (`OrderCreated`, `CheckInventory`, `InventoryChecked`, `ProcessPayment`, `PaymentProcessed`, `OrderConfirmed`) over RabbitMQ — no synchronous service-to-service HTTP calls exist.
 - **Saga / Orchestration**: `OrderStateMachine` (Contracts/Saga) is the explicit orchestrator — it owns the workflow sequence and emits commands (`CheckInventory`, `ProcessPayment`) rather than services choreographing themselves.
-- **Not** Clean/Onion/Hexagonal layered architecture internally — each service is a thin host (DI + MassTransit wiring) with no internal Application/Domain/Infrastructure layering; `Contracts` and `Db.Repository` play the role of a shared kernel instead of per-service layers.
+- **Clean Architecture layering for data access** — `Domain` (entities, repository contracts, `IUnitOfWork`), `Application` (`IOrderService`/`OrderService`, AutoMapper profile), and `Infrastructure` (`AppDbContext`, EF configurations, repository implementations, migrations) separate concerns for the persistence/order-CRUD slice; each runnable service is still a thin host (DI + MassTransit wiring) on top of that, and `Contracts` plays the role of a shared messaging kernel.
 - **Not CQRS** — no separate command/query handler pipeline (no MediatR); `OrderController` talks to `AppDbContext` directly.
 - **Light DDD** — entities (`Order`, `Product`, `OrderDetail`, `OrderSagaState`) model the domain, but there's no aggregate root enforcement, no domain events distinct from the integration events, and no encapsulated invariants (all properties are public auto-properties).
 
@@ -58,22 +58,26 @@ MicroService.sln
 ├── src/PaymentService           — Worker host owning PaymentConsumer (payment-queue)
 ├── src/NotificationService      — Worker host owning NotificationConsumer (notification-queue)
 ├── src/Contracts                — Shared message contracts, saga definition, all consumer impls, DTOs, topology helper
-└── src/Db.Repository             — AppDbContext, entities, EF Core migrations (shared by every service)
+├── src/Domain                    — Entities, repository contracts (`IGenericRepository<T>`, `IOrderRepository`, `IProductRepository`), `IUnitOfWork`, domain exceptions
+├── src/Application               — `IOrderService`/`OrderService`, AutoMapper profile, `AddApplication` DI extension (used by WebApp)
+└── src/Infrastructure            — `AppDbContext`, EF entity configurations, repository implementations, `UnitOfWork`, EF Core migrations, `AddInfrastructure` DI extension (used by every service)
 ```
 
 ### Responsibilities & Dependencies
 
 | Project | Type | Depends on | Owns |
 |---|---|---|---|
-| WebApp | ASP.NET Core Web API | Contracts, Db.Repository | `OrderCreated` publishing, REST API, dashboard, order simulator |
-| OrderSaga | Worker | Contracts, Db.Repository | `OrderStateMachine` saga execution |
-| InventoryService | Worker | Contracts | `InventoryConsumer` / `inventory-queue` |
-| PaymentService | Worker | Contracts | `PaymentConsumer` / `payment-queue` |
-| NotificationService | Worker | Contracts | `NotificationConsumer` / `notification-queue` |
-| Contracts | Class library | Db.Repository | Message contracts, saga state machine, all consumers + definitions, DTOs |
-| Db.Repository | Class library | — | `AppDbContext`, entities, migrations |
+| WebApp | ASP.NET Core Web API | Contracts, Application, Infrastructure, Domain | `OrderCreated` publishing, REST API, dashboard, order simulator |
+| OrderSaga | Worker | Contracts, Infrastructure, Domain | `OrderStateMachine` saga execution |
+| InventoryService | Worker | Contracts, Infrastructure, Domain | `InventoryConsumer` / `inventory-queue` |
+| PaymentService | Worker | Contracts, Infrastructure, Domain | `PaymentConsumer` / `payment-queue` |
+| NotificationService | Worker | Contracts, Infrastructure, Domain | `NotificationConsumer` / `notification-queue` |
+| Contracts | Class library | Domain | Message contracts, saga state machine, all consumers + definitions, DTOs |
+| Domain | Class library | — | Entities, repository contracts, `IUnitOfWork`, domain exceptions |
+| Application | Class library | Domain | `IOrderService`/`OrderService`, AutoMapper profile, `AddApplication` DI extension |
+| Infrastructure | Class library | Domain | `AppDbContext`, EF entity configurations, repository implementations, `UnitOfWork`, migrations, `AddInfrastructure` DI extension |
 
-There is no separate Application/Domain/Infrastructure split — `Contracts` plays "shared message + behavior kernel," `Db.Repository` plays "shared persistence kernel." Each runnable service is essentially a composition root.
+`Contracts` plays "shared message + behavior kernel." Persistence now follows a Clean Architecture split: `Domain` (entities/contracts) ← `Application` (order-service orchestration) and `Domain` ← `Infrastructure` (EF Core implementation), with every service composition root wiring up `Infrastructure` for its own `AppDbContext`/outbox needs and `WebApp` additionally wiring up `Application` for order CRUD.
 
 ### The Shared-Topology Pattern (non-obvious, load-bearing)
 
@@ -89,9 +93,15 @@ graph TD
     InventoryService -->|AddAllConsumers, owner=InventoryConsumer| Contracts
     PaymentService -->|AddAllConsumers, owner=PaymentConsumer| Contracts
     NotificationService -->|AddAllConsumers, owner=NotificationConsumer| Contracts
-    Contracts --> DbRepository[Db.Repository]
-    WebApp --> DbRepository
-    OrderSaga --> DbRepository
+    Contracts --> Domain
+    WebApp --> Infrastructure
+    WebApp --> Application
+    Application --> Domain
+    OrderSaga --> Infrastructure
+    InventoryService --> Infrastructure
+    PaymentService --> Infrastructure
+    NotificationService --> Infrastructure
+    Infrastructure --> Domain
 ```
 
 ## Request Flow
@@ -147,7 +157,7 @@ sequenceDiagram
 
 ## Database Design
 
-`AppDbContext` (`src/Db.Repository/AppDbContext.cs`) is shared verbatim across every service (each registers its own instance against the same `OrderDB`).
+`AppDbContext` (`src/Infrastructure/Persistence/AppDbContext.cs`) is shared verbatim across every service (each registers its own instance against the same `OrderDB`, via `AddInfrastructure`).
 
 ### Entities
 
@@ -199,14 +209,11 @@ erDiagram
 
 ### Migrations
 
-- `20260616132157_AddOrderSagaState` / `20260616133520_SeedProducts` — present under `WebApp/Migrations`
-- `20260617085751_Init` — present under `Db.Repository/Migrations` (creates all tables incl. Inbox/Outbox, seeds 5 products)
-
-Not enough evidence found in the repository to determine why two separate migration histories exist (WebApp has its own `Migrations/` folder in addition to `Db.Repository/Migrations/`) — this may be leftover from project restructuring and should be reconciled before relying on `dotnet ef database update` from a clean database.
+- `20260617121802_Init` — present under `src/Infrastructure/Migrations` (creates all tables incl. Inbox/Outbox, seeds 5 products). This is the single source of truth for the schema; the previous dual-history issue (a separate `WebApp/Migrations` folder alongside `Db.Repository/Migrations`) was resolved when the data access layer was consolidated into `Infrastructure`.
 
 ### Repository / Unit of Work
 
-No `IRepository<T>` or `IUnitOfWork` abstraction exists. `AppDbContext` is injected directly into `OrderController` and consumers; `AppDbContext` itself (via EF Core's `SaveChanges` + the surrounding `DbTransaction`) functions as the de facto unit of work.
+`Domain` defines `IGenericRepository<T>`, `IOrderRepository`, `IProductRepository`, and `IUnitOfWork`; `Infrastructure` provides the EF Core-backed implementations (including `UnitOfWork`). `OrderController` (via `Application`'s `OrderService`) depends on `IUnitOfWork` rather than `AppDbContext` directly; `AppDbContext` itself remains the underlying EF Core unit of work that `UnitOfWork` wraps.
 
 ## Messaging Architecture
 
@@ -344,10 +351,8 @@ dotnet build
 ### Database Setup
 
 ```bash
-dotnet ef database update --project src/Db.Repository --startup-project src/WebApp
+dotnet ef database update --project src/Infrastructure --startup-project src/WebApp
 ```
-
-> Two migration histories currently exist (`WebApp/Migrations` and `Db.Repository/Migrations`) — verify which one applies cleanly to an empty database before relying on this in a new environment.
 
 ### Running RabbitMQ / SQL Server
 
@@ -409,7 +414,6 @@ Not enough evidence found in the repository (no `LICENSE` file present).
 
 - **Inventory and payment logic are hardcoded stubs** (`InventoryConsumer`, `PaymentConsumer` always return `true`) — replace with real checks before this is anything beyond a demo.
 - **No automated tests** — no unit tests for the state machine transitions, no integration tests for the outbox/consumer pipeline.
-- **Duplicate/conflicting EF migration histories** (`WebApp/Migrations` vs `Db.Repository/Migrations`) — reconcile into a single source of truth.
 - **No containerization** — add Dockerfiles + docker-compose (including SQL Server and RabbitMQ) so the system is runnable without manual local infra setup.
 
 ### Medium Priority
@@ -432,7 +436,7 @@ This repo is a clean, focused demonstration of the **saga + transactional outbox
 
 ## Overall Architecture Score: 7/10
 
-Consistent, well-factored event-driven/saga design with a genuinely clever shared-topology mechanism; loses points for the layering being entirely flat (no per-service domain/application separation) and the unresolved dual-migration-history issue.
+Consistent, well-factored event-driven/saga design with a genuinely clever shared-topology mechanism; the data access slice now has explicit Domain/Application/Infrastructure layering and a single migration history, though the messaging/worker side of each service remains a thin composition root rather than fully layered.
 
 ## Production Readiness Score: 3/10
 

@@ -15,11 +15,11 @@ dotnet run --project src/PaymentService
 dotnet run --project src/NotificationService
 ```
 
-EF Core migrations (always specify both projects — `Db.Repository` has no startup project of its own):
+EF Core migrations (always specify both projects — `Infrastructure` has no startup project of its own):
 
 ```
-dotnet ef migrations add <Name> --project src/Db.Repository --startup-project src/WebApp
-dotnet ef database update --project src/Db.Repository --startup-project src/WebApp
+dotnet ef migrations add <Name> --project src/Infrastructure --startup-project src/WebApp
+dotnet ef database update --project src/Infrastructure --startup-project src/WebApp
 ```
 
 Infra dependencies (not containerized in this repo — must be running locally):
@@ -37,7 +37,9 @@ This is a MassTransit/RabbitMQ saga-based order-processing system targeting **ne
 - **OrderSaga** — worker host that owns the `OrderStateMachine` saga (`Contracts/Saga/OrderStateMachine.cs`), persisted via `EntityFrameworkRepository` against `AppDbContext`.
 - **InventoryService**, **PaymentService**, **NotificationService** — each is a worker host that owns exactly one consumer (`InventoryConsumer`, `PaymentConsumer`, `NotificationConsumer` respectively) and declares a manual `ReceiveEndpoint` for its queue (`inventory-queue`, `payment-queue`, `notification-queue`).
 - **Contracts** — shared message contracts (`Messages/`, `Messages/Events/`), saga state machine + definition (`Saga/`), all consumer implementations and their `IConsumerDefinition`s (`Consumers/`), DTOs (`Dto/`), and the `BusTopologyExtensions.AddAllConsumers` helper.
-- **Db.Repository** — `AppDbContext`, entities (`Order`, `OrderDetail`, `Product`, `OrderSagaState`), and EF Core migrations. Shared by every service (each owns its own `AppDbContext` registration pointing at the same `OrderDB`).
+- **Domain** — entities (`Order`, `OrderDetail`, `Product`, `OrderSagaState`), repository contracts (`IGenericRepository<T>`, `IOrderRepository`, `IProductRepository`), `IUnitOfWork`, domain exceptions. Referenced by every project that needs entity types (directly or transitively).
+- **Application** — `IOrderService`/`OrderService` (orchestrates `IUnitOfWork` + `IPublishEndpoint` + AutoMapper for order CRUD, preserving the original outbox transaction sequence), AutoMapper profile, `AddApplication` DI extension. Referenced by `WebApp`.
+- **Infrastructure** — `AppDbContext` (now at `Infrastructure.Persistence.AppDbContext`), EF entity type configurations (`IEntityTypeConfiguration<T>` per entity), concrete repository implementations, `UnitOfWork`, EF Core migrations, `AddInfrastructure` DI extension. Referenced by every service (`WebApp`, `OrderSaga`, `InventoryService`, `PaymentService`, `NotificationService`) since each owns its own MassTransit EF Core outbox table requiring `AppDbContext`.
 
 ### The shared-topology pattern (important, non-obvious)
 
