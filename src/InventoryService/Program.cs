@@ -56,13 +56,17 @@ builder.Services.AddMassTransit(x =>
             e.PrefetchCount = 16;
             e.ConcurrentMessageLimit = 8;
 
-            // ✅ Retry — outermost, wraps everything
+            // ✅ Retry — Wait time increases exponentially.
+            /*
+             * 1s,5s,15s,30s,60s
+             */
             e.UseMessageRetry(r =>
-                r.Intervals(
-                    TimeSpan.FromSeconds(5),
-                    TimeSpan.FromSeconds(15),
-                    TimeSpan.FromSeconds(30)
-                ));
+                 r.Exponential(
+                    retryLimit: 5,
+                    minInterval: TimeSpan.FromSeconds(1),
+                    maxInterval: TimeSpan.FromMinutes(1),
+                    intervalDelta: TimeSpan.FromSeconds(5))
+                );
 
             // ✅ Consumer — always last
             e.ConfigureConsumer<InventoryConsumer>(ctx);

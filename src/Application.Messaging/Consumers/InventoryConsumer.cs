@@ -13,6 +13,10 @@ public class InventoryConsumer(ILogger<InventoryConsumer> logger) : IConsumer<Ch
         logger.LogInformation("Checking inventory for Order {OrderId}",msg.OrderId);
 
 
+        //if (msg.OrderId == 15)
+        //{
+        //    throw new InvalidOperationException("Inventory check failed for order 15");
+        //}
         // TODO: real inventory check logic
         var isAvailable = true;
         
