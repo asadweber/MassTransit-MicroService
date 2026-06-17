@@ -15,6 +15,7 @@ builder.Services.AddApplication();
 
 builder.Services.AddMassTransit(x =>
 {
+    x.AddBusMetadataExplorer();
     x.UsingRabbitMq((ctx, cfg) =>
     {
         var rmq = builder.Configuration.GetSection("RabbitMQ");

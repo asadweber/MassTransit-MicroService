@@ -18,6 +18,7 @@ builder.Services.AddSingleton<IMongoClient>(_ =>
 
 builder.Services.AddMassTransit(x =>
 {
+    x.AddBusMetadataExplorer();
     x.AddSagaStateMachine<OrderStateMachine, OrderSagaState, OrderSagaDefinition>()
         .MongoDbRepository(
          r =>
