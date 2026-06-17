@@ -18,13 +18,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddMassTransit(x =>
 {
-    x.AddAllConsumers(); // registers full topology for dashboard — no endpoints created below
-
-    //x.AddEntityFrameworkOutbox<AppDbContext>(o =>
-    //{
-    //    o.UseSqlServer();
-    //    o.UseBusOutbox(); // intercepts Publish() — writes to OutboxMessage, relay forwards to RabbitMQ
-    //});
+    x.AddAllConsumers(); // registers full topology for dashboard — no endpoints created below   
 
     x.UsingRabbitMq((ctx, cfg) =>
     {
