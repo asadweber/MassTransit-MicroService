@@ -1,6 +1,5 @@
 using Application.Messaging.Command;
 using Application.Messaging.Events;
-using Domain.Entities;
 using MassTransit;
 
 namespace Application.Messaging.Saga;

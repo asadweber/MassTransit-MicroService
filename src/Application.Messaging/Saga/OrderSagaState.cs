@@ -1,6 +1,6 @@
 using MassTransit;
 
-namespace Domain.Entities;
+namespace Application.Messaging.Saga;
 
 public class OrderSagaState : SagaStateMachineInstance, ISagaVersion
 {
