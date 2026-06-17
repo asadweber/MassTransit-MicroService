@@ -1,7 +1,7 @@
 
 using Application.Dtos;
 
-namespace Contracts.Messages.Events;
+namespace Infrastructure.Messaging.Messages.Events;
 
 public class OrderCreated
 {

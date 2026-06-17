@@ -1,9 +1,10 @@
-using Contracts.Consumers;
-using Contracts.Saga;
 using Domain.Entities;
+using Infrastructure.Messaging.ConsumerDefinitions;
+using Infrastructure.Messaging.Consumers;
+using Infrastructure.Messaging.Saga;
 using MassTransit;
 
-namespace Contracts;
+namespace Infrastructure.Messaging;
 
 public static class BusTopologyExtensions
 {

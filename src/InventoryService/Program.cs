@@ -1,8 +1,9 @@
-using Contracts;
-using Contracts.Consumers;
+using Infrastructure.Messaging;
+using Infrastructure.Messaging.Consumers;
 using Infrastructure.Persistence;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
+
 
 var builder = Host.CreateApplicationBuilder(args);
 

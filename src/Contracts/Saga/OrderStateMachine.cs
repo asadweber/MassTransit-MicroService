@@ -1,9 +1,9 @@
-using Contracts.Messages;
-using Contracts.Messages.Events;
 using Domain.Entities;
+using Infrastructure.Messaging.Messages;
+using Infrastructure.Messaging.Messages.Events;
 using MassTransit;
 
-namespace Contracts.Saga;
+namespace Infrastructure.Messaging.Saga;
 
 public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
 {

@@ -1,4 +1,4 @@
-namespace Contracts.Messages;
+namespace Infrastructure.Messaging.Messages;
 
 public class OrderConfirmed
 {

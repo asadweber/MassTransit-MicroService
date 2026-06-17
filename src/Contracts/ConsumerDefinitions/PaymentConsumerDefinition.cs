@@ -1,6 +1,7 @@
+using Infrastructure.Messaging.Consumers;
 using MassTransit;
 
-namespace Contracts.Consumers;
+namespace Infrastructure.Messaging.ConsumerDefinitions;
 
 public class PaymentConsumerDefinition : ConsumerDefinition<PaymentConsumer>
 {

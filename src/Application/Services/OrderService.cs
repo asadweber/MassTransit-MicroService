@@ -1,10 +1,10 @@
 using AutoMapper;
 using Application.Dtos;
-using Contracts.Messages.Events;
 using Application.Interfaces;
 using Domain;
 using Domain.Entities;
 using MassTransit;
+using Infrastructure.Messaging.Messages.Events;
 
 namespace Application.Services;
 

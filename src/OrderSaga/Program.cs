@@ -1,5 +1,5 @@
-using Contracts;
-using Contracts.Saga;
+
+using Infrastructure.Messaging;
 using Infrastructure.Persistence;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;

@@ -1,4 +1,4 @@
-namespace Contracts.Messages.Events;
+namespace Infrastructure.Messaging.Messages.Events;
 
 public class InventoryChecked
 {

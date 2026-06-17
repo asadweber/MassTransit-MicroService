@@ -1,7 +1,6 @@
 using AutoMapper;
 using Application.Dtos;
-using Contracts.Messages;
-using Contracts.Messages.Events;
+using Infrastructure.Messaging.Messages.Events;
 using Domain.Entities;
 using Infrastructure.Persistence;
 using MassTransit;
