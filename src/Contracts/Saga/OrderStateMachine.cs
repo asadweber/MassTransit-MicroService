@@ -1,6 +1,6 @@
 using Contracts.Messages;
 using Contracts.Messages.Events;
-using Db.Repository;
+using Domain.Entities;
 using MassTransit;
 
 namespace Contracts.Saga;

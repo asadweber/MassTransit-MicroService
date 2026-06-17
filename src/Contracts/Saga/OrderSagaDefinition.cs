@@ -1,4 +1,5 @@
-﻿using Db.Repository;
+﻿using Domain.Entities;
+using Infrastructure.Persistence;
 using MassTransit;
 using System;
 using System.Collections.Generic;

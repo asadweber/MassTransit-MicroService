@@ -1,6 +1,6 @@
 using Contracts.Consumers;
 using Contracts.Saga;
-using Db.Repository;
+using Domain.Entities;
 using MassTransit;
 
 namespace Contracts;

@@ -1,4 +1,3 @@
-using Db.Repository;
 using MassTransit;
 
 namespace Contracts.Consumers;
