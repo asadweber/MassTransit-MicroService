@@ -37,7 +37,6 @@ builder.Services.AddMassTransit(x =>
         cfg.UseNewtonsoftJsonSerializer();
         cfg.UseNewtonsoftJsonDeserializer();
 
-        // WebApp is publish-only — no ConfigureEndpoints so no queues are created here
     });
 });
 
