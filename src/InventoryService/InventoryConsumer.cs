@@ -3,9 +3,9 @@ using Application.Messaging.Events;
 using MassTransit;
 using Microsoft.Extensions.Logging;
 
-namespace Application.Messaging.Consumers;
+namespace InventoryService;
 
-public class InventoryConsumer(ILogger<InventoryConsumer> logger) : IConsumer<CheckInventory>
+public class InventoryConsumer(ILogger<InventoryConsumer> logger ) : IConsumer<CheckInventory>
 {
     public async Task Consume(ConsumeContext<CheckInventory> context)
     {

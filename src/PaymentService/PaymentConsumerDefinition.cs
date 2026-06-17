@@ -1,7 +1,6 @@
-using Application.Messaging.Consumers;
 using MassTransit;
 
-namespace Application.Messaging.ConsumerDefinitions;
+namespace PaymentService;
 
 public class PaymentConsumerDefinition : ConsumerDefinition<PaymentConsumer>
 {

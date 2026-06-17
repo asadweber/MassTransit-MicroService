@@ -1,9 +1,9 @@
 
 using Application;
-using Application.Messaging;
 using Infrastructure;
 using MassTransit;
 using MongoDB.Driver;
+using OrderSaga.Saga;
 
 var builder = Host.CreateApplicationBuilder(args);
 
@@ -18,14 +18,14 @@ builder.Services.AddSingleton<IMongoClient>(_ =>
 
 builder.Services.AddMassTransit(x =>
 {
-    // OrderService Program.cs — owns the saga
-    x.AddAllConsumers(
-    configureSagaRepository: r =>
-    {
-        r.Connection = mongoSection["ConnectionString"];
-        r.DatabaseName = mongoSection["DatabaseName"];
-        r.CollectionName = mongoSection["SagaCollection"];
-    });
+    x.AddSagaStateMachine<OrderStateMachine, OrderSagaState, OrderSagaDefinition>()
+        .MongoDbRepository(
+         r =>
+        {
+            r.Connection = mongoSection["ConnectionString"];
+            r.DatabaseName = mongoSection["DatabaseName"];
+            r.CollectionName = mongoSection["SagaCollection"];
+        });
 
     x.AddMongoDbOutbox(o =>
     {

@@ -1,7 +1,7 @@
 using Application;
 using Application.Messaging;
-using Application.Messaging.Consumers;
 using Infrastructure;
+using InventoryService;
 using MassTransit;
 using MongoDB.Driver;
 
@@ -19,8 +19,9 @@ builder.Services.AddSingleton<IMongoClient>(_ =>
 
 builder.Services.AddMassTransit(x =>
 {
-    // InventoryService Program.cs
-    x.AddAllConsumers(ownerConsumerType: typeof(InventoryConsumer));
+    x.AddBusMetadataExplorer();
+    
+    x.AddConsumer<InventoryConsumer, InventoryConsumerDefinition>();
 
     x.AddMongoDbOutbox(o =>
     {

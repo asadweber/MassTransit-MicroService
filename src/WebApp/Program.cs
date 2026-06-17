@@ -1,7 +1,5 @@
 using Application;
-using Application.Messaging;
 using Infrastructure;
-using Infrastructure.Persistence;
 using MassTransit;
 using MongoDB.Driver;
 using Swashbuckle.AspNetCore.Filters;
@@ -17,9 +15,6 @@ builder.Services.AddApplication();
 
 builder.Services.AddMassTransit(x =>
 {
-    // WebApp Program.cs — publish only
-    x.AddAllConsumers();
-
     x.UsingRabbitMq((ctx, cfg) =>
     {
         var rmq = builder.Configuration.GetSection("RabbitMQ");

@@ -2,7 +2,7 @@ using Application.Messaging.Events;
 using MassTransit;
 using Microsoft.Extensions.Logging;
 
-namespace Application.Messaging.Consumers;
+namespace NotificationService;
 
 public class NotificationConsumer(ILogger<NotificationConsumer> logger) : IConsumer<OrderConfirmed>
 {

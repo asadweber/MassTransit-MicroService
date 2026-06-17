@@ -2,7 +2,7 @@ using Application.Messaging.Command;
 using Application.Messaging.Events;
 using MassTransit;
 
-namespace Application.Messaging.Saga;
+namespace OrderSaga.Saga;
 
 public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
 {

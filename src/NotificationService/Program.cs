@@ -1,9 +1,9 @@
 using Application;
 using Application.Messaging;
-using Application.Messaging.Consumers;
 using Infrastructure;
 using MassTransit;
 using MongoDB.Driver;
+using NotificationService;
 
 var builder = Host.CreateApplicationBuilder(args);
 
@@ -18,8 +18,9 @@ builder.Services.AddSingleton<IMongoClient>(_ =>
 
 builder.Services.AddMassTransit(x =>
 {
-    // NotificationService Program.cs
-    x.AddAllConsumers(ownerConsumerType: typeof(NotificationConsumer));
+    x.AddBusMetadataExplorer();
+    x.AddConsumer<NotificationConsumer, NotificationConsumerDefinition>();
+
     
     x.AddMongoDbOutbox(o =>
     {

@@ -3,7 +3,7 @@ using Application.Messaging.Events;
 using MassTransit;
 using Microsoft.Extensions.Logging;
 
-namespace Application.Messaging.Consumers;
+namespace PaymentService;
 
 public class PaymentConsumer(ILogger<PaymentConsumer> logger) : IConsumer<ProcessPayment>
 {

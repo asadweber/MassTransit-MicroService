@@ -1,7 +1,6 @@
-using Application.Messaging.Consumers;
 using MassTransit;
 
-namespace Application.Messaging.ConsumerDefinitions;
+namespace NotificationService;
 
 public class NotificationConsumerDefinition : ConsumerDefinition<NotificationConsumer>
 {

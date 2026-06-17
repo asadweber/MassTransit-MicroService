@@ -4,7 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Application.Messaging.Saga
+namespace OrderSaga.Saga
 {
     public class OrderSagaDefinition : SagaDefinition<OrderSagaState>
     {

@@ -1,9 +1,8 @@
 using Application;
-using Application.Messaging;
-using Application.Messaging.Consumers;
 using Infrastructure;
 using MassTransit;
 using MongoDB.Driver;
+using PaymentService;
 
 var builder = Host.CreateApplicationBuilder(args);
 
@@ -18,8 +17,8 @@ builder.Services.AddSingleton<IMongoClient>(_ =>
 
 builder.Services.AddMassTransit(x =>
 {
-    // PaymentService Program.cs
-    x.AddAllConsumers(ownerConsumerType: typeof(PaymentConsumer));
+    x.AddBusMetadataExplorer();
+    x.AddConsumer<PaymentConsumer, PaymentConsumerDefinition>();
 
     x.AddMongoDbOutbox(o =>
     {
