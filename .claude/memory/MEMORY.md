@@ -1,0 +1,3 @@
+- [Microservice overview](project_microservice_overview.md) — MassTransit saga arch, shared-topology consumer-ownership pattern
+- [Claude setup state](project_claude_setup.md) — what's already configured (CLAUDE.md, settings.json, .gitignore)
+- [Caveman mode feedback](feedback_caveman_mode.md) — terse mode active, code/commits stay normal
