@@ -68,8 +68,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
              .OnDelete(DeleteBehavior.Restrict);
         });
 
-        modelBuilder.AddInboxStateEntity();
-        modelBuilder.AddOutboxMessageEntity();
-        modelBuilder.AddOutboxStateEntity();
+        //modelBuilder.AddInboxStateEntity();
+        //modelBuilder.AddOutboxMessageEntity();
+        //modelBuilder.AddOutboxStateEntity();
     }
 }

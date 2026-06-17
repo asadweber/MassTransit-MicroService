@@ -23,7 +23,7 @@ public static class BusTopologyExtensions
         x.AddConsumer<InventoryConsumer, InventoryConsumerDefinition>().ExcludeFromConfigureEndpoints();
         x.AddConsumer<PaymentConsumer, PaymentConsumerDefinition>().ExcludeFromConfigureEndpoints();
         x.AddConsumer<NotificationConsumer, NotificationConsumerDefinition>().ExcludeFromConfigureEndpoints();
-        x.AddSagaStateMachine<OrderStateMachine, OrderSagaState, OrderSagaDefinition>().ExcludeFromConfigureEndpoints();
+        //x.AddSagaStateMachine<OrderStateMachine, OrderSagaState>().ExcludeFromConfigureEndpoints();
         return x;
     }
 }

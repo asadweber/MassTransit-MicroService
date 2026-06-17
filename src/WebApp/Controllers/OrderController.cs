@@ -1,11 +1,12 @@
 using AutoMapper;
 using Contracts.Dto;
-using Contracts.Messages;
 using Contracts.Messages.Events;
 using Db.Repository;
 using MassTransit;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Swashbuckle.AspNetCore.Filters;
+using WebApp.Swagger;
 
 namespace WebApp.Controllers;
 

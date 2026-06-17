@@ -10,6 +10,10 @@ public class InventoryConsumerDefinition : ConsumerDefinition<InventoryConsumer>
         IRegistrationContext context)
     {
         endpointConfigurator.UseMessageRetry(r =>
-            r.Interval(3, TimeSpan.FromSeconds(1)));
+            r.Intervals(
+                TimeSpan.FromSeconds(5),
+                TimeSpan.FromSeconds(15),
+                TimeSpan.FromSeconds(30)
+            ));
     }
 }
