@@ -58,16 +58,27 @@ builder.Services.AddMassTransit(x =>
             e.ConcurrentMessageLimit = 32;
 
             // ✅ Retry — Wait time increases exponentially.
-            /*
-             * 1s,5s,15s,30s,60s
-             */
+            // Fast retries for temporary failures
             e.UseMessageRetry(r =>
-                 r.Exponential(
+            {
+                r.Exponential(
                     retryLimit: 5,
                     minInterval: TimeSpan.FromSeconds(1),
                     maxInterval: TimeSpan.FromMinutes(1),
-                    intervalDelta: TimeSpan.FromSeconds(5))
-                );
+                    intervalDelta: TimeSpan.FromSeconds(5));
+            });
+
+            // Long-term retries
+            e.UseDelayedRedelivery(r =>
+            {
+                r.Intervals(
+                    TimeSpan.FromHours(1),
+                    TimeSpan.FromHours(6),
+                    TimeSpan.FromHours(12),
+                    TimeSpan.FromDays(1),
+                    TimeSpan.FromDays(3),
+                    TimeSpan.FromDays(7));
+            });
 
             // ✅ Consumer — always last
             e.ConfigureConsumer<InventoryConsumer>(ctx);
