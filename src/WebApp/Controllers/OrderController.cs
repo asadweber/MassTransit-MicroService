@@ -1,10 +1,6 @@
-using AutoMapper;
+using Application.Interfaces;
 using Contracts.Dto;
-using Contracts.Messages.Events;
-using Db.Repository;
-using MassTransit;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Swashbuckle.AspNetCore.Filters;
 using WebApp.Swagger;
 
@@ -12,90 +8,40 @@ namespace WebApp.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class OrderController(AppDbContext db, IPublishEndpoint bus, IMapper mapper) : ControllerBase
+public class OrderController(IOrderService orderService) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
-        var orders = await db.Orders
-            .Include(o => o.OrderDetails)
-                .ThenInclude(d => d.Product)
-            .ToListAsync();
-
-        return Ok(mapper.Map<List<OrderDto>>(orders));
+        return Ok(await orderService.GetAllAsync());
     }
 
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id)
     {
-        var order = await db.Orders
-            .Include(o => o.OrderDetails)
-                .ThenInclude(d => d.Product)
-            .FirstOrDefaultAsync(o => o.Id == id);
-
-        return order is null ? NotFound() : Ok(mapper.Map<OrderDto>(order));
+        var order = await orderService.GetByIdAsync(id);
+        return order is null ? NotFound() : Ok(order);
     }
 
     [HttpPost]
     [SwaggerRequestExample(typeof(OrderDto), typeof(OrderDtoExample))]
     public async Task<IActionResult> Create(OrderDto request)
     {
-        var order = mapper.Map<Order>(request);
-        order.OrderDate = DateTime.UtcNow;
-
-        foreach (var detail in order.OrderDetails)
-            detail.Total = detail.OrderQty * detail.UnitPrice;
-
-        order.TotalAmount = order.OrderDetails.Sum(d => d.Total);
-
-        await using var tx = await db.Database.BeginTransactionAsync();
-
-        db.Orders.Add(order);
-        await db.SaveChangesAsync();                                        // 1️⃣ order.Id assigned by DB
-
-        await bus.Publish(new OrderCreated { Order = mapper.Map<OrderDto>(order) }); // Id is valid ✅
-        await db.SaveChangesAsync();                                        // 2️⃣ flush OutboxMessage row
-
-        await tx.CommitAsync();                                             // both rows commit atomically
-
-        return CreatedAtAction(nameof(GetById), new { id = order.Id }, mapper.Map<OrderDto>(order));
+        var result = await orderService.CreateAsync(request);
+        return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
     }
 
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(int id, OrderDto request)
     {
-        if (id != request.Id) return BadRequest();
-
-        var existing = await db.Orders
-            .Include(o => o.OrderDetails)
-            .FirstOrDefaultAsync(o => o.Id == id);
-
-        if (existing is null) return NotFound();
-
-        mapper.Map(request, existing);
-
-        db.OrderDetails.RemoveRange(existing.OrderDetails);
-
-        existing.OrderDetails = mapper.Map<List<OrderDetail>>(request.OrderDetails);
-        foreach (var detail in existing.OrderDetails)
-        {
-            detail.OrderId = id;
-            detail.Total = detail.OrderQty * detail.UnitPrice;
-        }
-
-        existing.TotalAmount = existing.OrderDetails.Sum(d => d.Total);
-
-        await db.SaveChangesAsync();
-        return NoContent();
+        var updated = await orderService.UpdateAsync(id, request);
+        return updated ? NoContent() : NotFound();
     }
 
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id)
     {
-        var order = await db.Orders.FindAsync(id);
-        if (order is null) return NotFound();
-        db.Orders.Remove(order);
-        await db.SaveChangesAsync();
-        return NoContent();
+        var deleted = await orderService.DeleteAsync(id);
+        return deleted ? NoContent() : NotFound();
     }
 }

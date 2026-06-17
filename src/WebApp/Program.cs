@@ -1,19 +1,17 @@
-using AutoMapper;
+using Application;
 using Contracts;
-using Db.Repository;
+using Infrastructure;
+using Infrastructure.Persistence;
 using MassTransit;
-using Microsoft.EntityFrameworkCore;
 using Swashbuckle.AspNetCore.Filters;
-using WebApp.Mappings;
 using WebApp.Services;
 using WebApp.Swagger;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.AddDbContext<AppDbContext>((provider, options) =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"))
-           .UseApplicationServiceProvider(provider));
+builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddApplication();
 
 builder.Services.AddMassTransit(x =>
 {
@@ -51,8 +49,6 @@ builder.Services.AddMassTransitDashboard(options =>
 });
 
 builder.Services.AddHostedService<OrderSimulatorService>();
-
-builder.Services.AddAutoMapper(typeof(MapperProfile).Assembly);
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle

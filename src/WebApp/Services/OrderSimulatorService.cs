@@ -2,7 +2,8 @@ using AutoMapper;
 using Contracts.Dto;
 using Contracts.Messages;
 using Contracts.Messages.Events;
-using Db.Repository;
+using Domain.Entities;
+using Infrastructure.Persistence;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
 
