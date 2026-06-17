@@ -1,8 +1,8 @@
+using Application;
 using Application.Messaging;
 using Application.Messaging.Consumers;
-using Infrastructure.Persistence;
+using Infrastructure;
 using MassTransit;
-using Microsoft.EntityFrameworkCore;
 
 var builder = Host.CreateApplicationBuilder(args);
 
@@ -13,13 +13,6 @@ builder.Services.AddMassTransit(x =>
 {
     // PaymentService Program.cs
     x.AddAllConsumers(ownerConsumerType: typeof(PaymentConsumer));
-
-
-    //x.AddEntityFrameworkOutbox<AppDbContext>(o =>
-    //{
-    //    o.UseSqlServer();
-    //    o.UseBusOutbox();
-    //});
 
     x.AddMongoDbOutbox(o =>
     {
