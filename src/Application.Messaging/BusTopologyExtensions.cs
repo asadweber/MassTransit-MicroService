@@ -1,10 +1,10 @@
+using Application.Messaging.ConsumerDefinitions;
+using Application.Messaging.Consumers;
+using Application.Messaging.Saga;
 using Domain.Entities;
-using Infrastructure.Messaging.ConsumerDefinitions;
-using Infrastructure.Messaging.Consumers;
-using Infrastructure.Messaging.Saga;
 using MassTransit;
 
-namespace Infrastructure.Messaging;
+namespace Application.Messaging;
 
 public static class BusTopologyExtensions
 {

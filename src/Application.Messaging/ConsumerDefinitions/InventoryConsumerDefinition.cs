@@ -1,7 +1,7 @@
-using Infrastructure.Messaging.Consumers;
+using Application.Messaging.Consumers;
 using MassTransit;
 
-namespace Infrastructure.Messaging.ConsumerDefinitions;
+namespace Application.Messaging.ConsumerDefinitions;
 
 public class InventoryConsumerDefinition : ConsumerDefinition<InventoryConsumer>
 {

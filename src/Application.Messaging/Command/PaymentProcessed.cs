@@ -1,4 +1,4 @@
-namespace Infrastructure.Messaging.Messages.Events;
+namespace Application.Messaging.Command;
 
 public class PaymentProcessed
 {

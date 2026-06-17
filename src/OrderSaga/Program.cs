@@ -1,5 +1,5 @@
 
-using Infrastructure.Messaging;
+using Application.Messaging;
 using Infrastructure.Persistence;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;

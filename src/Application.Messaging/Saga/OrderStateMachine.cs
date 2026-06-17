@@ -1,9 +1,9 @@
+using Application.Messaging.Command;
+using Application.Messaging.Messages;
 using Domain.Entities;
-using Infrastructure.Messaging.Messages;
-using Infrastructure.Messaging.Messages.Events;
 using MassTransit;
 
-namespace Infrastructure.Messaging.Saga;
+namespace Application.Messaging.Saga;
 
 public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
 {

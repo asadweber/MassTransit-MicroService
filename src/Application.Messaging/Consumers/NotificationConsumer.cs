@@ -1,8 +1,8 @@
-using Infrastructure.Messaging.Messages;
+using Application.Messaging.Messages;
 using MassTransit;
 using Microsoft.Extensions.Logging;
 
-namespace Infrastructure.Messaging.Consumers;
+namespace Application.Messaging.Consumers;
 
 public class NotificationConsumer(ILogger<NotificationConsumer> logger) : IConsumer<OrderConfirmed>
 {

@@ -1,4 +1,4 @@
-namespace Infrastructure.Messaging.Messages;
+namespace Application.Messaging.Command;
 
 public class CheckInventory
 {

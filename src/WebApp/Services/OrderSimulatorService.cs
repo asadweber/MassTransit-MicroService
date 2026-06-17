@@ -1,10 +1,10 @@
 using AutoMapper;
 using Application.Dtos;
-using Infrastructure.Messaging.Messages.Events;
 using Domain.Entities;
 using Infrastructure.Persistence;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
+using Application.Messaging.Messages;
 
 namespace WebApp.Services;
 

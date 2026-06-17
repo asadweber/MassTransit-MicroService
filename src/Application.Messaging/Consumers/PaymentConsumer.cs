@@ -1,9 +1,8 @@
-using Infrastructure.Messaging.Messages;
-using Infrastructure.Messaging.Messages.Events;
+using Application.Messaging.Command;
 using MassTransit;
 using Microsoft.Extensions.Logging;
 
-namespace Infrastructure.Messaging.Consumers;
+namespace Application.Messaging.Consumers;
 
 public class PaymentConsumer(ILogger<PaymentConsumer> logger) : IConsumer<ProcessPayment>
 {

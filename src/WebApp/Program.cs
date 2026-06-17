@@ -1,6 +1,6 @@
 using Application;
+using Application.Messaging;
 using Infrastructure;
-using Infrastructure.Messaging;
 using Infrastructure.Persistence;
 using MassTransit;
 using Swashbuckle.AspNetCore.Filters;

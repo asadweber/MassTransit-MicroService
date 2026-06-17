@@ -1,9 +1,9 @@
-using Infrastructure.Messaging.Messages;
-using Infrastructure.Messaging.Messages.Events;
+using Application.Messaging.Command;
+using Application.Messaging.Messages;
 using MassTransit;
 using Microsoft.Extensions.Logging;
 
-namespace Infrastructure.Messaging.Consumers;
+namespace Application.Messaging.Consumers;
 
 public class InventoryConsumer(ILogger<InventoryConsumer> logger) : IConsumer<CheckInventory>
 {

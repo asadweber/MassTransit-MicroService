@@ -4,7 +4,7 @@ using Application.Interfaces;
 using Domain;
 using Domain.Entities;
 using MassTransit;
-using Infrastructure.Messaging.Messages.Events;
+using Application.Messaging.Messages;
 
 namespace Application.Services;
 

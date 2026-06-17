@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Infrastructure.Messaging.Saga
+namespace Application.Messaging.Saga
 {
     public class OrderSagaDefinition : SagaDefinition<OrderSagaState>
     {
