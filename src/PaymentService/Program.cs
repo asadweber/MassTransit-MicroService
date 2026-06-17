@@ -3,11 +3,18 @@ using Application.Messaging;
 using Application.Messaging.Consumers;
 using Infrastructure;
 using MassTransit;
+using MongoDB.Driver;
 
 var builder = Host.CreateApplicationBuilder(args);
 
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApplication();
+
+var mongoSection = builder.Configuration.GetSection("MongoDb");
+
+builder.Services.AddSingleton<IMongoClient>(_ =>
+    new MongoClient(mongoSection["ConnectionString"]));
+
 
 builder.Services.AddMassTransit(x =>
 {
@@ -16,7 +23,15 @@ builder.Services.AddMassTransit(x =>
 
     x.AddMongoDbOutbox(o =>
     {
+        o.ClientFactory(provider =>
+            provider.GetRequiredService<IMongoClient>());
+
+        o.DatabaseFactory(provider =>
+            provider.GetRequiredService<IMongoClient>()
+                .GetDatabase(mongoSection["DatabaseName"]));
+
         o.QueryDelay = TimeSpan.FromSeconds(1);
+
         o.UseBusOutbox();
     });
 

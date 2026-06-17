@@ -3,11 +3,17 @@ using Application;
 using Application.Messaging;
 using Infrastructure;
 using MassTransit;
+using MongoDB.Driver;
 
 var builder = Host.CreateApplicationBuilder(args);
 
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApplication();
+
+var mongoSection = builder.Configuration.GetSection("MongoDb");
+
+builder.Services.AddSingleton<IMongoClient>(_ =>
+    new MongoClient(mongoSection["ConnectionString"]));
 
 builder.Services.AddMassTransit(x =>
 {
@@ -15,14 +21,22 @@ builder.Services.AddMassTransit(x =>
     x.AddAllConsumers(
     configureSagaRepository: r =>
     {
-        r.Connection = builder.Configuration["MongoDb:ConnectionString"];
-        r.DatabaseName = "OrderSagaDb";
-        r.CollectionName = "OrderSagas";
+        r.Connection = mongoSection["ConnectionString"];
+        r.DatabaseName = mongoSection["DatabaseName"];
+        r.CollectionName = mongoSection["SagaCollection"];
     });
 
     x.AddMongoDbOutbox(o =>
     {
+        o.ClientFactory(provider =>
+            provider.GetRequiredService<IMongoClient>());
+
+        o.DatabaseFactory(provider =>
+            provider.GetRequiredService<IMongoClient>()
+                .GetDatabase(mongoSection["DatabaseName"]));
+
         o.QueryDelay = TimeSpan.FromSeconds(1);
+
         o.UseBusOutbox();
     });
 
@@ -37,8 +51,7 @@ builder.Services.AddMassTransit(x =>
 
         cfg.UseNewtonsoftJsonSerializer();
         cfg.UseNewtonsoftJsonDeserializer();
-
-
+        
         cfg.ConfigureEndpoints(ctx);
     });
 });
