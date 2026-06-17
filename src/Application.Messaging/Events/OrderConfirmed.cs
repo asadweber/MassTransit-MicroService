@@ -1,4 +1,4 @@
-namespace Application.Messaging.Messages;
+namespace Application.Messaging.Events;
 
 public class OrderConfirmed
 {

@@ -1,7 +1,6 @@
-
 using Application.Dtos;
 
-namespace Application.Messaging.Messages;
+namespace Application.Messaging.Events;
 
 public class OrderCreated
 {

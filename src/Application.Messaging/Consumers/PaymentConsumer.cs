@@ -1,4 +1,5 @@
 using Application.Messaging.Command;
+using Application.Messaging.Events;
 using MassTransit;
 using Microsoft.Extensions.Logging;
 

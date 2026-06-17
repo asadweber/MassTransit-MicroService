@@ -4,7 +4,7 @@ using Domain.Entities;
 using Infrastructure.Persistence;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
-using Application.Messaging.Messages;
+using Application.Messaging.Events;
 
 namespace WebApp.Services;
 

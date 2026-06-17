@@ -7,9 +7,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="Messages\Commands\**" />
-    <EmbeddedResource Remove="Messages\Commands\**" />
-    <None Remove="Messages\Commands\**" />
+    <Compile Remove="Events\Commands\**" />
+    <EmbeddedResource Remove="Events\Commands\**" />
+    <None Remove="Events\Commands\**" />
   </ItemGroup>
 
   <ItemGroup>

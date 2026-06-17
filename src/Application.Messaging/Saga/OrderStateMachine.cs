@@ -1,5 +1,5 @@
 using Application.Messaging.Command;
-using Application.Messaging.Messages;
+using Application.Messaging.Events;
 using Domain.Entities;
 using MassTransit;
 
