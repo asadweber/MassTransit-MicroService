@@ -3,6 +3,7 @@ using Application.Messaging;
 using Application.Messaging.Consumers;
 using Infrastructure;
 using MassTransit;
+using MongoDB.Driver;
 
 
 var builder = Host.CreateApplicationBuilder(args);
@@ -10,8 +11,18 @@ var builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApplication();
 
+builder.Services.AddSingleton<IMongoClient>(_ =>
+    new MongoClient(
+        builder.Configuration["MongoDb:ConnectionString"]));
+
 builder.Services.AddMassTransit(x =>
 {
+    x.SetMongoDbSagaRepositoryProvider(r =>
+    {
+        r.Connection = "mongodb://127.0.0.1";
+        r.DatabaseName = "sagadb";
+    });
+
     // InventoryService Program.cs
     x.AddAllConsumers(ownerConsumerType: typeof(InventoryConsumer));
   
@@ -48,9 +59,6 @@ builder.Services.AddMassTransit(x =>
                     TimeSpan.FromSeconds(15),
                     TimeSpan.FromSeconds(30)
                 ));
-
-            // ✅ Outbox — inner, atomic with DB transaction
-            e.UseMongoDbOutbox(ctx);
 
             // ✅ Consumer — always last
             e.ConfigureConsumer<InventoryConsumer>(ctx);

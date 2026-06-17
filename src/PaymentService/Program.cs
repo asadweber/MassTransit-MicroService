@@ -48,9 +48,6 @@ builder.Services.AddMassTransit(x =>
                     TimeSpan.FromSeconds(30)
                 ));
 
-            // ✅ Outbox — inner, atomic with DB transaction
-            e.UseMongoDbOutbox(ctx);
-
             // ✅ Consumer — always last
             e.ConfigureConsumer<PaymentConsumer>(ctx);
         });

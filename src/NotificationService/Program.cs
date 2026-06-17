@@ -12,20 +12,7 @@ builder.Services.AddApplication();
 builder.Services.AddMassTransit(x =>
 {
     // NotificationService Program.cs
-    x.AddAllConsumers(ownerConsumerType: typeof(NotificationConsumer));
-
-    //x.AddEntityFrameworkOutbox<AppDbContext>(o =>
-    //{
-    //    o.UseSqlServer();
-    //    o.UseBusOutbox();
-    //    o.QueryDelay = TimeSpan.FromSeconds(1);
-    //});
-
-    x.AddMongoDbOutbox(o =>
-    {
-        o.QueryDelay = TimeSpan.FromSeconds(1);
-        o.UseBusOutbox();
-    });
+    x.AddAllConsumers(ownerConsumerType: typeof(NotificationConsumer));    
 
     x.UsingRabbitMq((ctx, cfg) =>
     {
@@ -54,9 +41,6 @@ builder.Services.AddMassTransit(x =>
                     TimeSpan.FromSeconds(15),
                     TimeSpan.FromSeconds(30)
                 ));
-
-            // ✅ Outbox — inner, atomic with DB transaction
-            e.UseMongoDbOutbox(ctx);
 
             // ✅ Consumer — always last
             e.ConfigureConsumer<NotificationConsumer>(ctx);
