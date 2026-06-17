@@ -3,20 +3,16 @@ using Application.Messaging.Consumers;
 using Application.Messaging.Saga;
 using Domain.Entities;
 using MassTransit;
+using MassTransit.MongoDbIntegration;
 
 namespace Application.Messaging;
 
 public static class BusTopologyExtensions
 {
-    /// <summary>
-    /// Registers all consumers so every service and the dashboard see the full message topology.
-    /// Each service should still call cfg.ConfigureEndpoints(ctx) to create only its own queue.
-    /// WebApp should NOT call ConfigureEndpoints — it publishes only, no queues needed.
-    /// </summary>
     public static IBusRegistrationConfigurator AddAllConsumers(
-    this IBusRegistrationConfigurator x,
-    Action<IEntityFrameworkSagaRepositoryConfigurator>? configureSagaRepository = null,
-    Type? ownerConsumerType = null) // ← which consumer this service owns
+        this IBusRegistrationConfigurator x,
+        Action<IMongoDbSagaRepositoryConfigurator>? configureSagaRepository = null,
+        Type? ownerConsumerType = null)
     {
         x.AddBusMetadataExplorer();
 
@@ -24,10 +20,11 @@ public static class BusTopologyExtensions
         AddConsumerWithOwnership<PaymentConsumer, PaymentConsumerDefinition>(x, ownerConsumerType);
         AddConsumerWithOwnership<NotificationConsumer, NotificationConsumerDefinition>(x, ownerConsumerType);
 
-        var sagaRegistration = x.AddSagaStateMachine<OrderStateMachine, OrderSagaState, OrderSagaDefinition>();
+        var sagaRegistration =
+            x.AddSagaStateMachine<OrderStateMachine, OrderSagaState, OrderSagaDefinition>();
 
         if (configureSagaRepository is not null)
-            sagaRegistration.EntityFrameworkRepository(configureSagaRepository);
+            sagaRegistration.MongoDbRepository(configureSagaRepository);
         else
             sagaRegistration.ExcludeFromConfigureEndpoints();
 
@@ -43,7 +40,7 @@ public static class BusTopologyExtensions
         var registration = x.AddConsumer<TConsumer, TDefinition>();
 
         if (ownerConsumerType == typeof(TConsumer))
-            return; // ← this service owns it, don't exclude — ConfigureEndpoints will create queue
+            return;
 
         registration.ExcludeFromConfigureEndpoints();
     }

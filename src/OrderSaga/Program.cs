@@ -1,31 +1,29 @@
 
+using Application;
 using Application.Messaging;
-using Infrastructure.Persistence;
+using Infrastructure;
 using MassTransit;
-using Microsoft.EntityFrameworkCore;
 
 var builder = Host.CreateApplicationBuilder(args);
 
-builder.Services.AddDbContext<AppDbContext>((provider, options) =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"))
-           .UseApplicationServiceProvider(provider));
+builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddApplication();
 
 builder.Services.AddMassTransit(x =>
 {
     // OrderService Program.cs — owns the saga
-    x.AddAllConsumers(configureSagaRepository: r =>
+    x.AddAllConsumers(
+    configureSagaRepository: r =>
     {
-        r.ConcurrencyMode = ConcurrencyMode.Optimistic;
-        r.ExistingDbContext<AppDbContext>();
-        r.UseSqlServer();
+        r.Connection = builder.Configuration["MongoDb:ConnectionString"];
+        r.DatabaseName = "OrderSagaDb";
+        r.CollectionName = "OrderSagas";
     });
 
-    // ✅ Required for outbox — starts background SQL poller
-    x.AddEntityFrameworkOutbox<AppDbContext>(o =>
+    x.AddMongoDbOutbox(o =>
     {
-        o.UseSqlServer();
-        o.UseBusOutbox();
         o.QueryDelay = TimeSpan.FromSeconds(1);
+        o.UseBusOutbox();
     });
 
     x.UsingRabbitMq((ctx, cfg) =>

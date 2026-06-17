@@ -18,13 +18,18 @@ builder.Services.AddMassTransit(x =>
     // WebApp Program.cs — publish only
     x.AddAllConsumers();
 
+    //x.AddEntityFrameworkOutbox<AppDbContext>(o =>
+    //{
+    //    o.UseSqlServer();
+    //    o.UseBusOutbox(); // intercepts Publish() → writes to OutboxMessage table
+    //    o.QueryDelay = TimeSpan.FromSeconds(1);   // ← how often relay checks for new messages
 
-    x.AddEntityFrameworkOutbox<AppDbContext>(o =>
+    //});
+
+    x.AddMongoDbOutbox(o =>
     {
-        o.UseSqlServer();
-        o.UseBusOutbox(); // intercepts Publish() → writes to OutboxMessage table
-        o.QueryDelay = TimeSpan.FromSeconds(1);   // ← how often relay checks for new messages
-
+        o.QueryDelay = TimeSpan.FromSeconds(1);
+        o.UseBusOutbox();
     });
 
     x.UsingRabbitMq((ctx, cfg) =>

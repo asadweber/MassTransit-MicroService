@@ -6,10 +6,8 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = Host.CreateApplicationBuilder(args);
 
-// ✅ Register AppDbContext — MassTransit outbox needs it in DI
-builder.Services.AddDbContext<AppDbContext>((provider, options) =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"))
-           .UseApplicationServiceProvider(provider));
+builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddApplication();
 
 builder.Services.AddMassTransit(x =>
 {
@@ -17,9 +15,15 @@ builder.Services.AddMassTransit(x =>
     x.AddAllConsumers(ownerConsumerType: typeof(PaymentConsumer));
 
 
-    x.AddEntityFrameworkOutbox<AppDbContext>(o =>
+    //x.AddEntityFrameworkOutbox<AppDbContext>(o =>
+    //{
+    //    o.UseSqlServer();
+    //    o.UseBusOutbox();
+    //});
+
+    x.AddMongoDbOutbox(o =>
     {
-        o.UseSqlServer();
+        o.QueryDelay = TimeSpan.FromSeconds(1);
         o.UseBusOutbox();
     });
 
@@ -52,7 +56,7 @@ builder.Services.AddMassTransit(x =>
                 ));
 
             // ✅ Outbox — inner, atomic with DB transaction
-            e.UseEntityFrameworkOutbox<AppDbContext>(ctx);
+            e.UseMongoDbOutbox(ctx);
 
             // ✅ Consumer — always last
             e.ConfigureConsumer<PaymentConsumer>(ctx);

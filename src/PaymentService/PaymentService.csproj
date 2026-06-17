@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Worker">
+﻿<Project Sdk="Microsoft.NET.Sdk.Worker">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -10,13 +10,15 @@
   <ItemGroup>
     <PackageReference Include="MassTransit" Version="9.2.0-develop.150" />
     <PackageReference Include="MassTransit.AspNetCore" Version="9.2.0-develop.150" />
+    <PackageReference Include="MassTransit.MongoDb" Version="9.2.0-develop.150" />
     <PackageReference Include="MassTransit.Newtonsoft" Version="9.2.0-develop.150" />
     <PackageReference Include="MassTransit.RabbitMQ" Version="9.2.0-develop.150" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.9" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Application.Messaging\Application.Messaging.csproj" />
-    <ProjectReference Include="..\Infrastructure\Infrastructure.csproj" />
+	  <ProjectReference Include="..\Application.Messaging\Application.Messaging.csproj" />
+	  <ProjectReference Include="..\Application\Application.csproj" />
+	  <ProjectReference Include="..\Infrastructure\Infrastructure.csproj" />
   </ItemGroup>
 </Project>

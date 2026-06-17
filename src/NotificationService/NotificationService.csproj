@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <PackageReference Include="MassTransit" Version="9.2.0-develop.150" />
+    <PackageReference Include="MassTransit.MongoDb" Version="9.2.0-develop.150" />
     <PackageReference Include="MassTransit.Newtonsoft" Version="9.2.0-develop.150" />
     <PackageReference Include="MassTransit.RabbitMQ" Version="9.2.0-develop.150" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.9" />
@@ -16,6 +17,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Application.Messaging\Application.Messaging.csproj" />
+    <ProjectReference Include="..\Application\Application.csproj" />
     <ProjectReference Include="..\Infrastructure\Infrastructure.csproj" />
   </ItemGroup>
 </Project>
