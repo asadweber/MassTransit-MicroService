@@ -15,6 +15,7 @@ var mongoSection = builder.Configuration.GetSection("MongoDb");
 builder.Services.AddSingleton<IMongoClient>(_ =>
     new MongoClient(mongoSection["ConnectionString"]));
 
+
 builder.Services.AddMassTransit(x =>
 {
     // OrderService Program.cs — owns the saga
@@ -57,4 +58,24 @@ builder.Services.AddMassTransit(x =>
 });
 
 var host = builder.Build();
+using (var scope = host.Services.CreateScope())
+{
+    var mongoClient =
+        scope.ServiceProvider.GetRequiredService<IMongoClient>();
+
+    var database = mongoClient.GetDatabase(
+        builder.Configuration["MongoDb:DatabaseName"]);
+
+    var collectionName =
+        builder.Configuration["MongoDb:SagaCollection"];
+
+    var collections =
+        await database.ListCollectionNames().ToListAsync();
+
+    if (!collections.Contains(collectionName))
+    {
+        await database.CreateCollectionAsync(collectionName);
+    }
+}
+
 host.Run();
