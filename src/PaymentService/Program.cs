@@ -21,6 +21,20 @@ builder.Services.AddMassTransit(x =>
         cfg.UseNewtonsoftJsonSerializer();
         cfg.UseNewtonsoftJsonDeserializer();
 
+        cfg.ReceiveEndpoint("payment-queue", e =>
+        {
+            //1️ Queue/exchange properties
+            e.Durable = true;
+            e.AutoDelete = false;
+            e.PrefetchCount = 16;
+            e.ConcurrentMessageLimit = 8;
+
+            //e.UseInMemoryOutbox(ctx);
+
+            //2.Consumer last
+            e.ConfigureConsumer<PaymentConsumer>(ctx);
+        });
+
         cfg.ConfigureEndpoints(ctx);
     });
 });

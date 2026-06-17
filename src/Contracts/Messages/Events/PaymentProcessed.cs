@@ -1,4 +1,4 @@
-namespace Contracts.Messages;
+namespace Contracts.Messages.Events;
 
 public class PaymentProcessed
 {

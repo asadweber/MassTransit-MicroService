@@ -11,15 +11,13 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddMassTransit(x =>
 {
-    x.AddAllConsumers(); // full topology metadata (saga excluded from endpoints)
+    x.AddAllConsumers(r =>
+    {
+        r.ConcurrencyMode = ConcurrencyMode.Optimistic;
+        r.ExistingDbContext<AppDbContext>();
+        r.UseSqlServer();
+    });
 
-    x.AddSagaStateMachine<OrderStateMachine, OrderSagaState>() // re-register: this service owns the saga queue
-     .EntityFrameworkRepository(r =>
-     {
-         r.ConcurrencyMode = ConcurrencyMode.Optimistic;
-         r.ExistingDbContext<AppDbContext>();
-         r.UseSqlServer();
-     });
 
     x.UsingRabbitMq((ctx, cfg) =>
     {
@@ -32,6 +30,7 @@ builder.Services.AddMassTransit(x =>
 
         cfg.UseNewtonsoftJsonSerializer();
         cfg.UseNewtonsoftJsonDeserializer();
+
 
         cfg.ConfigureEndpoints(ctx);
     });

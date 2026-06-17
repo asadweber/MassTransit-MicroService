@@ -13,17 +13,34 @@ public static class BusTopologyExtensions
     /// WebApp should NOT call ConfigureEndpoints — it publishes only, no queues needed.
     /// </summary>
     public static IBusRegistrationConfigurator AddAllConsumers(
-        this IBusRegistrationConfigurator x)
+        this IBusRegistrationConfigurator x,
+        Action<IEntityFrameworkSagaRepositoryConfigurator>? configureSagaRepository = null)
     {
         x.AddBusMetadataExplorer();
 
-        // ExcludeFromConfigureEndpoints = topology metadata only, no queues created.
-        // Each real service re-registers its own type WITHOUT this flag so its
-        // queue is created when ConfigureEndpoints is called.
-        x.AddConsumer<InventoryConsumer, InventoryConsumerDefinition>().ExcludeFromConfigureEndpoints();
-        x.AddConsumer<PaymentConsumer, PaymentConsumerDefinition>().ExcludeFromConfigureEndpoints();
-        x.AddConsumer<NotificationConsumer, NotificationConsumerDefinition>().ExcludeFromConfigureEndpoints();
-        //x.AddSagaStateMachine<OrderStateMachine, OrderSagaState>().ExcludeFromConfigureEndpoints();
+        x.AddConsumer<InventoryConsumer, InventoryConsumerDefinition>()
+            .ExcludeFromConfigureEndpoints();
+
+        x.AddConsumer<PaymentConsumer, PaymentConsumerDefinition>()
+            .ExcludeFromConfigureEndpoints();
+
+        x.AddConsumer<NotificationConsumer, NotificationConsumerDefinition>()
+            .ExcludeFromConfigureEndpoints();
+
+        // ✅ Only attach EF repository when this service owns the saga
+        var sagaRegistration = x.AddSagaStateMachine<OrderStateMachine, OrderSagaState, OrderSagaDefinition>();
+
+        if (configureSagaRepository is not null)
+        {
+            sagaRegistration.EntityFrameworkRepository(configureSagaRepository);
+            // ✅ Don't exclude — this service owns the queue, ConfigureEndpoints will create it
+        }
+        else
+        {
+            // ✅ Other services — topology only, no queue, no repository
+            sagaRegistration.ExcludeFromConfigureEndpoints();
+        }
+
         return x;
     }
 }
