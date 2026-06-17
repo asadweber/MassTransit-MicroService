@@ -7,8 +7,9 @@ using Microsoft.EntityFrameworkCore;
 var builder = Host.CreateApplicationBuilder(args);
 
 // ✅ Register AppDbContext — MassTransit outbox needs it in DI
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddDbContext<AppDbContext>((provider, options) =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"))
+           .UseApplicationServiceProvider(provider));
 
 builder.Services.AddMassTransit(x =>
 {
@@ -17,7 +18,6 @@ builder.Services.AddMassTransit(x =>
     {
         o.UseSqlServer();
         o.UseBusOutbox();
-        o.QueryDelay = TimeSpan.FromSeconds(1);
     });
 
     x.UsingRabbitMq((ctx, cfg) =>
