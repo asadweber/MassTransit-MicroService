@@ -11,18 +11,8 @@ var builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApplication();
 
-builder.Services.AddSingleton<IMongoClient>(_ =>
-    new MongoClient(
-        builder.Configuration["MongoDb:ConnectionString"]));
-
 builder.Services.AddMassTransit(x =>
 {
-    x.SetMongoDbSagaRepositoryProvider(r =>
-    {
-        r.Connection = "mongodb://127.0.0.1";
-        r.DatabaseName = "sagadb";
-    });
-
     // InventoryService Program.cs
     x.AddAllConsumers(ownerConsumerType: typeof(InventoryConsumer));
   
