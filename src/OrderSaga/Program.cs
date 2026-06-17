@@ -1,6 +1,6 @@
 using Contracts;
 using Contracts.Saga;
-using Db.Repository;
+using Infrastructure.Persistence;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
 
