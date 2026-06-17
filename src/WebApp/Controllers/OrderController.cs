@@ -1,5 +1,5 @@
 using Application.Interfaces;
-using Contracts.Dto;
+using Application.Dtos;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Filters;
 using WebApp.Swagger;

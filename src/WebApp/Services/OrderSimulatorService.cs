@@ -1,5 +1,5 @@
 using AutoMapper;
-using Contracts.Dto;
+using Application.Dtos;
 using Contracts.Messages;
 using Contracts.Messages.Events;
 using Domain.Entities;

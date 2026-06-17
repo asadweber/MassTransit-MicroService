@@ -1,4 +1,4 @@
-using Contracts.Dto;
+using Application.Dtos;
 using Swashbuckle.AspNetCore.Filters;
 
 namespace WebApp.Swagger;

@@ -1,4 +1,4 @@
-namespace Contracts.Dto;
+namespace Application.Dtos;
 
 [Serializable]
 public class OrderDetailDto

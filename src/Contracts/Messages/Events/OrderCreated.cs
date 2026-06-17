@@ -1,4 +1,5 @@
-using Contracts.Dto;
+
+using Application.Dtos;
 
 namespace Contracts.Messages.Events;
 

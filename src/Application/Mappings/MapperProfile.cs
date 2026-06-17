@@ -1,5 +1,5 @@
+using Application.Dtos;
 using AutoMapper;
-using Contracts.Dto;
 using Domain.Entities;
 
 namespace Application.Mappings;

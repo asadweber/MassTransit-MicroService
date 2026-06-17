@@ -1,4 +1,4 @@
-using Contracts.Dto;
+using Application.Dtos;
 
 namespace Application.Interfaces;
 
