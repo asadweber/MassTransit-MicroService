@@ -10,11 +10,12 @@ public class InventoryConsumer(ILogger<InventoryConsumer> logger) : IConsumer<Ch
     public async Task Consume(ConsumeContext<CheckInventory> context)
     {
         var msg = context.Message;
-        logger.LogInformation("Checking inventory for Order {OrderId}, Products: {Products}",
-            msg.OrderId, string.Join(',', msg.ProductIds));
+        logger.LogInformation("Checking inventory for Order {OrderId}",msg.OrderId);
 
         // TODO: real inventory check logic
         var isAvailable = true;
+        
+        
 
         await context.Publish(new InventoryChecked
         {

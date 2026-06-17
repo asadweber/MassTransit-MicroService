@@ -37,14 +37,14 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                     ctx.Saga.OrderId = ctx.Message.Order.Id;
                     ctx.Saga.CustomerName = ctx.Message.Order.CustomerName;
                     ctx.Saga.TotalAmount = ctx.Message.Order.TotalAmount;
-                    ctx.Saga.ProductIds = ctx.Message.Order.OrderDetails
-                        .Select(d => d.ProductId).ToList();
+                    //ctx.Saga.ProductIds = ctx.Message.Order.OrderDetails
+                    //    .Select(d => d.ProductId).ToList();
                 })
                 .PublishAsync(ctx => ctx.Init<CheckInventory>(new CheckInventory
                 {
                     CorrelationId = ctx.Saga.CorrelationId,
                     OrderId = ctx.Saga.OrderId,
-                    ProductIds = ctx.Saga.ProductIds
+                    //ProductIds = ctx.Saga.ProductIds
                 }))
                 .TransitionTo(CheckingInventory));
 

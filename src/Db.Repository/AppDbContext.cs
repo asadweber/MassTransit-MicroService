@@ -44,15 +44,15 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         {
             e.HasKey(s => s.CorrelationId);
             e.Property(s => s.TotalAmount).HasPrecision(18, 2);
-            e.Property(s => s.ProductIds)
-             .HasConversion(
-                v => string.Join(',', v),
-                v => v.Split(',', StringSplitOptions.RemoveEmptyEntries)
-                       .Select(int.Parse).ToList())
-             .Metadata.SetValueComparer(new ValueComparer<List<int>>(
-                (a, b) => a != null && b != null && a.SequenceEqual(b),
-                v => v.Aggregate(0, (a, i) => HashCode.Combine(a, i)),
-                v => v.ToList()));
+            //e.Property(s => s.ProductIds)
+            // .HasConversion(
+            //    v => string.Join(',', v),
+            //    v => v.Split(',', StringSplitOptions.RemoveEmptyEntries)
+            //           .Select(int.Parse).ToList())
+            // .Metadata.SetValueComparer(new ValueComparer<List<int>>(
+            //    (a, b) => a != null && b != null && a.SequenceEqual(b),
+            //    v => v.Aggregate(0, (a, i) => HashCode.Combine(a, i)),
+            //    v => v.ToList()));
         });
 
         modelBuilder.Entity<OrderDetail>(e =>
