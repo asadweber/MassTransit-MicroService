@@ -35,12 +35,8 @@ public class OrderService(IUnitOfWork uow, IPublishEndpoint bus, IMapper mapper)
         await uow.BeginTransactionAsync();
 
         await uow.Orders.AddAsync(order);
-        await uow.SaveChangesAsync();                                              // 1) order.Id assigned by DB
-
-        await bus.Publish(new OrderCreated { Order = mapper.Map<OrderDto>(order) }); // Id is valid
-        await uow.SaveChangesAsync();                                              // 2) flush OutboxMessage row
-
-        await uow.CommitAsync();                                                   // both rows commit atomically
+        await uow.SaveChangesAsync();  
+        await uow.CommitAsync();                                                   
 
         return mapper.Map<OrderDto>(order);
     }

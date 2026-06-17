@@ -3,6 +3,7 @@ using Application.Messaging;
 using Infrastructure;
 using Infrastructure.Persistence;
 using MassTransit;
+using MongoDB.Driver;
 using Swashbuckle.AspNetCore.Filters;
 using WebApp.Services;
 using WebApp.Swagger;
@@ -13,16 +14,15 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApplication();
 
+var mongoSection = builder.Configuration.GetSection("MongoDb");
+
+builder.Services.AddSingleton<IMongoClient>(_ =>
+    new MongoClient(mongoSection["ConnectionString"]));
+
 builder.Services.AddMassTransit(x =>
 {
     // WebApp Program.cs — publish only
     x.AddAllConsumers();
-
-    x.AddMongoDbOutbox(o =>
-    {
-        o.QueryDelay = TimeSpan.FromSeconds(1);
-        o.UseBusOutbox();
-    });
 
     x.UsingRabbitMq((ctx, cfg) =>
     {

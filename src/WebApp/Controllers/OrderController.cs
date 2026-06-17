@@ -1,5 +1,9 @@
-using Application.Interfaces;
 using Application.Dtos;
+using Application.Interfaces;
+using Application.Messaging.Events;
+using AutoMapper;
+using Domain.Entities;
+using MassTransit;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Filters;
 using WebApp.Swagger;
@@ -8,7 +12,7 @@ namespace WebApp.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class OrderController(IOrderService orderService) : ControllerBase
+public class OrderController(IOrderService orderService, IPublishEndpoint bus, IMapper mapper) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> GetAll()
@@ -28,6 +32,7 @@ public class OrderController(IOrderService orderService) : ControllerBase
     public async Task<IActionResult> Create(OrderDto request)
     {
         var result = await orderService.CreateAsync(request);
+        await bus.Publish(new OrderCreated { Order = mapper.Map<OrderDto>(result) });
         return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
     }
 
