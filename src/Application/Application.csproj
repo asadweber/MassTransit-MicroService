@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -15,7 +15,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Application.Dtos\Application.Dtos.csproj" />
     <ProjectReference Include="..\Domain\Domain.csproj" />
-    <ProjectReference Include="..\Contracts\Infrastructure.Messaging.csproj" />
+    <ProjectReference Include="..\Application.Messaging\Application.Messaging.csproj" />
   </ItemGroup>
 
 </Project>

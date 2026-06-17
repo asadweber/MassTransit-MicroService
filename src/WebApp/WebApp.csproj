@@ -31,8 +31,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Domain\Domain.csproj" />
     <ProjectReference Include="..\Application\Application.csproj" />
-    <ProjectReference Include="..\Infrastructure\Infrastructure.csproj" />
-    <ProjectReference Include="..\Contracts\Infrastructure.Messaging.csproj" />
+    <ProjectReference Include="..\Application.Messaging\Application.Messaging.csproj" />
   </ItemGroup>
 
 </Project>

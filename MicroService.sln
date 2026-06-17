@@ -5,7 +5,7 @@ VisualStudioVersion = 18.8.11904.113
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebApp", "src\WebApp\WebApp.csproj", "{E3CF19E4-5622-64B9-34FF-31DCC94C3E01}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Infrastructure.Messaging", "src\Infrastructure.Messaging\Infrastructure.Messaging.csproj", "{07BC6F43-C15F-E0F2-5973-6F32D66D1A14}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Application.Messaging", "src\Application.Messaging\Application.Messaging.csproj", "{07BC6F43-C15F-E0F2-5973-6F32D66D1A14}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{827E0CD3-B72D-47B6-A68D-7590B98EB39B}"
 EndProject
