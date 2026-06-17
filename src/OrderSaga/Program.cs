@@ -12,7 +12,8 @@ builder.Services.AddDbContext<AppDbContext>((provider, options) =>
 
 builder.Services.AddMassTransit(x =>
 {
-    x.AddAllConsumers(r =>
+    // OrderService Program.cs — owns the saga
+    x.AddAllConsumers(configureSagaRepository: r =>
     {
         r.ConcurrencyMode = ConcurrencyMode.Optimistic;
         r.ExistingDbContext<AppDbContext>();

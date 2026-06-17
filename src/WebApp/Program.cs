@@ -17,7 +17,9 @@ builder.Services.AddDbContext<AppDbContext>((provider, options) =>
 
 builder.Services.AddMassTransit(x =>
 {
-    x.AddAllConsumers(); // registers full topology for dashboard — no endpoints created below   
+    // WebApp Program.cs — publish only
+    x.AddAllConsumers();
+
 
     x.AddEntityFrameworkOutbox<AppDbContext>(o =>
     {

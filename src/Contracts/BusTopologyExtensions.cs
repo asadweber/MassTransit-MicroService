@@ -13,34 +13,37 @@ public static class BusTopologyExtensions
     /// WebApp should NOT call ConfigureEndpoints — it publishes only, no queues needed.
     /// </summary>
     public static IBusRegistrationConfigurator AddAllConsumers(
-        this IBusRegistrationConfigurator x,
-        Action<IEntityFrameworkSagaRepositoryConfigurator>? configureSagaRepository = null)
+    this IBusRegistrationConfigurator x,
+    Action<IEntityFrameworkSagaRepositoryConfigurator>? configureSagaRepository = null,
+    Type? ownerConsumerType = null) // ← which consumer this service owns
     {
         x.AddBusMetadataExplorer();
 
-        x.AddConsumer<InventoryConsumer, InventoryConsumerDefinition>()
-            .ExcludeFromConfigureEndpoints();
+        AddConsumerWithOwnership<InventoryConsumer, InventoryConsumerDefinition>(x, ownerConsumerType);
+        AddConsumerWithOwnership<PaymentConsumer, PaymentConsumerDefinition>(x, ownerConsumerType);
+        AddConsumerWithOwnership<NotificationConsumer, NotificationConsumerDefinition>(x, ownerConsumerType);
 
-        x.AddConsumer<PaymentConsumer, PaymentConsumerDefinition>()
-            .ExcludeFromConfigureEndpoints();
-
-        x.AddConsumer<NotificationConsumer, NotificationConsumerDefinition>()
-            .ExcludeFromConfigureEndpoints();
-
-        // ✅ Only attach EF repository when this service owns the saga
         var sagaRegistration = x.AddSagaStateMachine<OrderStateMachine, OrderSagaState, OrderSagaDefinition>();
 
         if (configureSagaRepository is not null)
-        {
             sagaRegistration.EntityFrameworkRepository(configureSagaRepository);
-            // ✅ Don't exclude — this service owns the queue, ConfigureEndpoints will create it
-        }
         else
-        {
-            // ✅ Other services — topology only, no queue, no repository
             sagaRegistration.ExcludeFromConfigureEndpoints();
-        }
 
         return x;
+    }
+
+    private static void AddConsumerWithOwnership<TConsumer, TDefinition>(
+        IBusRegistrationConfigurator x,
+        Type? ownerConsumerType)
+        where TConsumer : class, IConsumer
+        where TDefinition : class, IConsumerDefinition<TConsumer>
+    {
+        var registration = x.AddConsumer<TConsumer, TDefinition>();
+
+        if (ownerConsumerType == typeof(TConsumer))
+            return; // ← this service owns it, don't exclude — ConfigureEndpoints will create queue
+
+        registration.ExcludeFromConfigureEndpoints();
     }
 }

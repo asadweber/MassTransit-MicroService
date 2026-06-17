@@ -13,8 +13,10 @@ builder.Services.AddDbContext<AppDbContext>((provider, options) =>
 
 builder.Services.AddMassTransit(x =>
 {
-    x.AddAllConsumers();             // full topology metadata (all consumers excluded from endpoints)
-                                     // ✅ Required for UseEntityFrameworkOutbox to function + starts background poller
+    // InventoryService Program.cs
+    x.AddAllConsumers(ownerConsumerType: typeof(InventoryConsumer));
+
+    // ✅ Required for UseEntityFrameworkOutbox to function + starts background poller
     x.AddEntityFrameworkOutbox<AppDbContext>(o =>
     {
         o.UseSqlServer();

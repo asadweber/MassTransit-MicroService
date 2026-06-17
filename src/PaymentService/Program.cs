@@ -13,7 +13,10 @@ builder.Services.AddDbContext<AppDbContext>((provider, options) =>
 
 builder.Services.AddMassTransit(x =>
 {
-    x.AddAllConsumers();            // full topology metadata (all consumers excluded from endpoints)
+    // PaymentService Program.cs
+    x.AddAllConsumers(ownerConsumerType: typeof(PaymentConsumer));
+
+
     x.AddEntityFrameworkOutbox<AppDbContext>(o =>
     {
         o.UseSqlServer();

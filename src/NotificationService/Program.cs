@@ -13,7 +13,9 @@ builder.Services.AddDbContext<AppDbContext>((provider, options) =>
 
 builder.Services.AddMassTransit(x =>
 {
-    x.AddAllConsumers();                  // full topology metadata (all consumers excluded from endpoints)
+    // NotificationService Program.cs
+    x.AddAllConsumers(ownerConsumerType: typeof(NotificationConsumer));
+
     x.AddEntityFrameworkOutbox<AppDbContext>(o =>
     {
         o.UseSqlServer();
