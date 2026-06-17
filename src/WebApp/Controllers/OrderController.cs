@@ -37,7 +37,7 @@ public class OrderController(AppDbContext db, IPublishEndpoint bus, IMapper mapp
     }
 
     [HttpPost]
-    //[SwaggerRequestExample(typeof(OrderDto), typeof(OrderDtoExample))]
+    [SwaggerRequestExample(typeof(OrderDto), typeof(OrderDtoExample))]
     public async Task<IActionResult> Create(OrderDto request)
     {
         var order = mapper.Map<Order>(request);
@@ -50,13 +50,13 @@ public class OrderController(AppDbContext db, IPublishEndpoint bus, IMapper mapp
 
         await using var tx = await db.Database.BeginTransactionAsync();
 
-        db.Orders.Add(order);
-        await db.SaveChangesAsync();                                         // saves Order row
+        db.Orders.Add(order);                                               // stage Order
 
-        await bus.Publish(new OrderCreated { Order = mapper.Map<OrderDto>(order) }); // writes to OutboxMessage
-        await db.SaveChangesAsync();                                         // flushes outbox row
+        await bus.Publish(new OrderCreated { Order = mapper.Map<OrderDto>(order) }); // stage OutboxMessage
 
-        await tx.CommitAsync();                                              // both rows commit atomically
+        await db.SaveChangesAsync();                                        // flush both in ONE call
+
+        await tx.CommitAsync();                                             // commit atomically
 
         return CreatedAtAction(nameof(GetById), new { id = order.Id }, mapper.Map<OrderDto>(order));
     }

@@ -2,18 +2,21 @@ using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Microsoft.Extensions.Configuration;
 
 namespace Db.Repository;
 
 public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
-    public AppDbContext CreateDbContext(string[] args)
-    {
-        var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
-        optionsBuilder.UseSqlServer("Server=localhost;Database=OrderDB;User Id=sa;Password=Asdf1234;Connect Timeout=30;Min Pool Size=5;Max Pool Size=100;TrustServerCertificate=True;");
+    //public AppDbContext CreateDbContext(string[] args)
+    //{
+    //    var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
+    //    optionsBuilder.UseSqlServer("Server=localhost;Database=OrderDB;User Id=sa;Password=Asdf1234;Connect Timeout=30;Min Pool Size=5;Max Pool Size=100;TrustServerCertificate=True;");
 
-        return new AppDbContext(optionsBuilder.Options);
-    }
+    //    return new AppDbContext(optionsBuilder.Options);
+    //}
+
+
     public DbSet<Product> Products => Set<Product>();
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<OrderDetail> OrderDetails => Set<OrderDetail>();
