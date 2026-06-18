@@ -1,4 +1,5 @@
 using Application;
+using Application.Dtos;
 using Infrastructure;
 using MassTransit;
 using MongoDB.Driver;
@@ -13,12 +14,42 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApplication();
 
 
+// ── MongoDB Settings ──────────────────────────────────────────────────────
+builder.Services.Configure<MongoDbSettings>(
+    builder.Configuration.GetSection("MongoDb"));
+
+var mongoSettings = builder.Configuration
+    .GetSection("MongoDb")
+    .Get<MongoDbSettings>()!;
+
+
+// ── MassTransit(Publish - Only + MongoDB Outbox) ───────────────────────────
 builder.Services.AddMassTransit(x =>
 {
     x.AddBusMetadataExplorer();
+
+    // MongoDB Transactional Outbox
+    // IPublishEndpoint.Publish() → writes to MongoDB → OutboxDelivery forwards to RabbitMQ
+    x.AddMongoDbOutbox(o =>
+    {
+        o.Connection = mongoSettings.ConnectionString;
+        o.DatabaseName = mongoSettings.DatabaseName;
+
+        // No ClientName needed — only required when multiple instances
+        // share the same outbox and consume from it
+
+        o.UseBusOutbox(b =>
+        {
+            b.MessageDeliveryLimit = 100;
+            b.MessageDeliveryTimeout = TimeSpan.FromSeconds(10);
+        });
+    });
+
+    // RabbitMQ Transport
     x.UsingRabbitMq((ctx, cfg) =>
     {
         var rmq = builder.Configuration.GetSection("RabbitMQ");
+
         cfg.Host(rmq["Host"], rmq["VirtualHost"], h =>
         {
             h.Username(rmq["Username"]!);
@@ -28,8 +59,10 @@ builder.Services.AddMassTransit(x =>
         cfg.UseNewtonsoftJsonSerializer();
         cfg.UseNewtonsoftJsonDeserializer();
 
+        // No ConfigureEndpoints — no consumers to wire up
     });
 });
+
 
 builder.Services.AddMassTransitDashboard(options =>
 {

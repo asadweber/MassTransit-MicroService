@@ -12,9 +12,6 @@ builder.Services.AddApplication();
 
 var mongoSection = builder.Configuration.GetSection("MongoDb");
 
-builder.Services.AddSingleton<IMongoClient>(_ =>
-    new MongoClient(mongoSection["ConnectionString"]));
-
 
 builder.Services.AddMassTransit(x =>
 {
@@ -24,16 +21,15 @@ builder.Services.AddMassTransit(x =>
     
     x.AddMongoDbOutbox(o =>
     {
-        o.ClientFactory(provider =>
-            provider.GetRequiredService<IMongoClient>());
-
-        o.DatabaseFactory(provider =>
-            provider.GetRequiredService<IMongoClient>()
-                .GetDatabase(mongoSection["DatabaseName"]));
-
+        o.Connection = mongoSection["ConnectionString"];
+        o.DatabaseName = mongoSection["DatabaseName"];
         o.QueryDelay = TimeSpan.FromSeconds(1);
 
-        o.UseBusOutbox();
+        o.UseBusOutbox(b =>
+        {
+            b.MessageDeliveryLimit = 100;
+            b.MessageDeliveryTimeout = TimeSpan.FromSeconds(10);
+        });
     });
 
     x.UsingRabbitMq((ctx, cfg) =>

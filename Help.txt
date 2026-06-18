@@ -1,2 +1,13 @@
 dotnet ef migrations add Init --project src/Infrastructure --startup-project src/WebApp
 dotnet ef database update --project src/Infrastructure --startup-project src/WebApp
+
+
+
+winget install MongoDB.Shell
+
+mongosh "mongodb://localhost:27017"
+
+rs.initiate({
+>>   _id: "rs0",
+>>   members: [{ _id: 0, host: "localhost:27017" }]
+>> })
