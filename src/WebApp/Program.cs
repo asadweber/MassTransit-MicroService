@@ -1,8 +1,8 @@
 using Application;
 using Application.Dtos;
 using Infrastructure;
+using Infrastructure.Persistence;
 using MassTransit;
-using MongoDB.Driver;
 using Swashbuckle.AspNetCore.Filters;
 using WebApp.Services;
 using WebApp.Swagger;
@@ -14,27 +14,17 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApplication();
 
 
-// ── MongoDB Settings ──────────────────────────────────────────────────────
-builder.Services.Configure<MongoDbSettings>(
-    builder.Configuration.GetSection("MongoDb"));
-
-var mongoSettings = builder.Configuration
-    .GetSection("MongoDb")
-    .Get<MongoDbSettings>()!;
-
-
-// ── MassTransit(Publish - Only + MongoDB Outbox) ───────────────────────────
+// ── MassTransit(Publish - Only + EF Core Outbox) ────────────────────────────
 builder.Services.AddMassTransit(x =>
 {
     x.AddBusMetadataExplorer();
 
-    // MongoDB Transactional Outbox
-    // IPublishEndpoint.Publish() → writes to MongoDB → OutboxDelivery forwards to RabbitMQ
-    x.AddMongoDbOutbox(o =>
+    // EF Core Transactional Outbox
+    // IPublishEndpoint.Publish() → writes to AppDbContext outbox tables → OutboxDelivery forwards to RabbitMQ
+    x.AddEntityFrameworkOutbox<AppDbContext>(o =>
     {
-        o.Connection = mongoSettings.ConnectionString;
-        o.DatabaseName = mongoSettings.DatabaseName;
-        o.QueryDelay = TimeSpan.FromSeconds(1); // ✅ add this
+        o.UseSqlServer();
+        o.QueryDelay = TimeSpan.FromSeconds(1);
 
         // ✅ For publish-only: disable inbox cleanup (no consumers)
         o.DisableInboxCleanupService();
@@ -85,24 +75,6 @@ builder.Services.AddSwaggerExamplesFromAssemblyOf<OrderDtoExample>();
 
 
 var app = builder.Build();
-
-// ── Ensure MongoDB Outbox collections exist on startup ────────────────────
-using (var scope = app.Services.CreateScope())
-{
-    var mongoClient = new MongoClient(mongoSettings.ConnectionString);
-    var database = mongoClient.GetDatabase(mongoSettings.DatabaseName);
-
-    var existingCollections = await database.ListCollectionNames().ToListAsync();
-
-    if (!existingCollections.Contains("OutboxMessage"))
-        await database.CreateCollectionAsync("OutboxMessage");
-
-    if (!existingCollections.Contains("OutboxState"))
-        await database.CreateCollectionAsync("OutboxState");
-
-    if (!existingCollections.Contains("InboxState"))
-        await database.CreateCollectionAsync("InboxState");
-}
 
 app.UseSwagger();
 app.UseSwaggerUI();

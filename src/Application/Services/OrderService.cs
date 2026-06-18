@@ -1,10 +1,11 @@
-using AutoMapper;
 using Application.Dtos;
 using Application.Interfaces;
+using Application.Messaging.Events;
+using AutoMapper;
 using Domain;
 using Domain.Entities;
 using MassTransit;
-using Application.Messaging.Events;
+using static MassTransit.ValidationResultExtensions;
 
 namespace Application.Services;
 
@@ -33,11 +34,10 @@ public class OrderService(IUnitOfWork uow, IPublishEndpoint bus, IMapper mapper)
         order.TotalAmount = order.OrderDetails.Sum(d => d.Total);
 
         await uow.BeginTransactionAsync();
-
         await uow.Orders.AddAsync(order);
+        await bus.Publish(new OrderCreated { Order = mapper.Map<OrderDto>(order) });
         await uow.SaveChangesAsync();  
         await uow.CommitAsync();                                                   
-
         return mapper.Map<OrderDto>(order);
     }
 
