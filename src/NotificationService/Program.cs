@@ -1,8 +1,8 @@
 using Application;
 using Application.Messaging;
 using Infrastructure;
+using Infrastructure.Persistence;
 using MassTransit;
-using MongoDB.Driver;
 using NotificationService;
 
 var builder = Host.CreateApplicationBuilder(args);
@@ -10,19 +10,15 @@ var builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApplication();
 
-var mongoSection = builder.Configuration.GetSection("MongoDb");
-
 
 builder.Services.AddMassTransit(x =>
 {
     x.AddBusMetadataExplorer();
     x.AddConsumer<NotificationConsumer, NotificationConsumerDefinition>();
 
-    
-    x.AddMongoDbOutbox(o =>
+    x.AddEntityFrameworkOutbox<AppDbContext>(o =>
     {
-        o.Connection = mongoSection["ConnectionString"];
-        o.DatabaseName = mongoSection["DatabaseName"];
+        o.UseSqlServer();
         o.QueryDelay = TimeSpan.FromSeconds(1);
 
         o.UseBusOutbox(b =>
@@ -59,6 +55,9 @@ builder.Services.AddMassTransit(x =>
                     TimeSpan.FromSeconds(15),
                     TimeSpan.FromSeconds(30)
                 ));
+
+            // ✅ EF Core outbox — atomic with the DB transaction
+            e.UseEntityFrameworkOutbox<AppDbContext>(ctx);
 
             // ✅ Consumer — always last
             e.ConfigureConsumer<NotificationConsumer>(ctx);

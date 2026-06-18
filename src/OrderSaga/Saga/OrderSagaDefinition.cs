@@ -20,7 +20,7 @@ namespace OrderSaga.Saga
                     TimeSpan.FromSeconds(30)
                 ));
 
-            //endpointConfigurator.UseMongoDbOutbox(context);
+            endpointConfigurator.UseEntityFrameworkOutbox<AppDbContext>(context);
         }
     }
 }

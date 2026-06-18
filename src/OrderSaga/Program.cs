@@ -1,5 +1,6 @@
 using Application;
 using Infrastructure;
+using Infrastructure.Persistence;
 using MassTransit;
 using MongoDB.Driver;
 using OrderSaga.Saga;
@@ -25,10 +26,9 @@ builder.Services.AddMassTransit(x =>
             r.CollectionName = mongoSection["SagaCollection"];
         });
 
-    x.AddMongoDbOutbox(o =>
+    x.AddEntityFrameworkOutbox<AppDbContext>(o =>
     {
-        o.Connection = mongoSection["ConnectionString"];
-        o.DatabaseName = mongoSection["DatabaseName"];
+        o.UseSqlServer();
         o.QueryDelay = TimeSpan.FromSeconds(1);
 
         o.UseBusOutbox(b =>
