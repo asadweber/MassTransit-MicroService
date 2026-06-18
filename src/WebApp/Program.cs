@@ -22,17 +22,6 @@ var mongoSettings = builder.Configuration
     .GetSection("MongoDb")
     .Get<MongoDbSettings>()!;
 
-// ✅ Fail fast if config is missing
-if (string.IsNullOrEmpty(mongoSettings?.ConnectionString))
-    throw new InvalidOperationException("MongoDb:ConnectionString is not configured.");
-if (string.IsNullOrEmpty(mongoSettings?.DatabaseName))
-    throw new InvalidOperationException("MongoDb:DatabaseName is not configured.");
-
-Console.WriteLine($"[DEBUG] MongoDB Connection: {mongoSettings.ConnectionString}");
-Console.WriteLine($"[DEBUG] MongoDB Database: {mongoSettings.DatabaseName}");
-
-
-
 
 // ── MassTransit(Publish - Only + MongoDB Outbox) ───────────────────────────
 builder.Services.AddMassTransit(x =>
