@@ -2,7 +2,6 @@ using Application.Dtos;
 using Application.Interfaces;
 using Application.Messaging.Events;
 using AutoMapper;
-using Domain.Entities;
 using MassTransit;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Filters;
