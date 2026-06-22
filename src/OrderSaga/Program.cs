@@ -10,7 +10,7 @@ var builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApplication();
 
-var mongoSection = builder.Configuration.GetSection("MongoDb");
+var mongoSection = builder.Configuration.GetSection("MongoDb").Get<MongoDbSettings>();
 
 builder.Services.AddMassTransit(x =>
 {
@@ -21,9 +21,9 @@ builder.Services.AddMassTransit(x =>
         {
             // Use the same connection string — MassTransit will resolve
             // the shared IMongoClient internally via ClientFactory below
-            r.Connection = mongoSection["ConnectionString"];
-            r.DatabaseName = mongoSection["DatabaseName"];
-            r.CollectionName = mongoSection["SagaCollection"];
+            r.Connection = mongoSection.ConnectionString;
+            r.DatabaseName = mongoSection.DatabaseName;
+            r.CollectionName = mongoSection.SagaCollection;
         });
 
     x.AddMongoDbOutbox(o =>
