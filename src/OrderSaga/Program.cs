@@ -26,15 +26,16 @@ builder.Services.AddMassTransit(x =>
             r.CollectionName = mongoSection.SagaCollection;
         });
 
-    x.AddMongoDbOutbox(o =>
+    x.AddEntityFrameworkOutbox<AppDbContext>(o =>
     {
+        o.UseSqlServer();
         o.QueryDelay = TimeSpan.FromSeconds(1);
-        o.ClientFactory(provider => provider.GetRequiredService<IMongoClient>());
-        o.DatabaseFactory(provider => provider.GetRequiredService<IMongoDatabase>());
 
-        o.DuplicateDetectionWindow = TimeSpan.FromSeconds(30);
-
-        o.UseBusOutbox();
+        o.UseBusOutbox(b =>
+        {
+            b.MessageDeliveryLimit = 100;
+            b.MessageDeliveryTimeout = TimeSpan.FromSeconds(10);
+        });
     });
 
 
