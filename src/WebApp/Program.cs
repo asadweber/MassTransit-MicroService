@@ -16,10 +16,9 @@ builder.Services.AddApplication();
 
 // MongoDB
 var mongoSettings = builder.Configuration.GetSection("MongoDb").Get<MongoDbSettings>()!;
-builder.Services.AddSingleton(mongoSettings); 
+builder.Services.AddSingleton(mongoSettings);
 builder.Services.AddSingleton<IMongoClient>(_ => new MongoClient(mongoSettings.ConnectionString));
-builder.Services.AddSingleton<IMongoDatabase>(provider =>
-    provider.GetRequiredService<IMongoClient>().GetDatabase(mongoSettings.DatabaseName));
+builder.Services.AddSingleton<IMongoDatabase>(provider =>provider.GetRequiredService<IMongoClient>().GetDatabase(mongoSettings.DatabaseName));
 
 
 
@@ -27,23 +26,6 @@ builder.Services.AddSingleton<IMongoDatabase>(provider =>
 builder.Services.AddMassTransit(x =>
 {
     x.AddBusMetadataExplorer();
-
-    // EF Core Transactional Outbox
-    // IPublishEndpoint.Publish() → writes to AppDbContext outbox tables → OutboxDelivery forwards to RabbitMQ
-    //x.AddEntityFrameworkOutbox<AppDbContext>(o =>
-    //{
-    //    o.UseSqlServer();
-    //    o.QueryDelay = TimeSpan.FromSeconds(1);
-
-    //    // ✅ For publish-only: disable inbox cleanup (no consumers)
-    //    o.DisableInboxCleanupService();
-
-    //    o.UseBusOutbox(b =>
-    //    {
-    //        b.MessageDeliveryLimit = 100;
-    //        b.MessageDeliveryTimeout = TimeSpan.FromSeconds(10);
-    //    });
-    //});
 
     x.AddMongoDbOutbox(o =>
     {
@@ -55,8 +37,6 @@ builder.Services.AddMassTransit(x =>
 
         o.UseBusOutbox();
     });
-
-
 
     // RabbitMQ Transport
     x.UsingRabbitMq((ctx, cfg) =>
