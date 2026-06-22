@@ -3,6 +3,7 @@ using Application.Dtos;
 using Infrastructure;
 using Infrastructure.Persistence;
 using MassTransit;
+using MassTransit.MongoDbIntegration;
 using MongoDB.Driver;
 using Swashbuckle.AspNetCore.Filters;
 using WebApp.Services;
@@ -14,12 +15,13 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApplication();
 
-// MongoDB
-var mongoSettings = builder.Configuration.GetSection("MongoDb").Get<MongoDbSettings>()!;
-builder.Services.AddSingleton(mongoSettings);
-builder.Services.AddSingleton<IMongoClient>(_ => new MongoClient(mongoSettings.ConnectionString));
-builder.Services.AddSingleton<IMongoDatabase>(provider =>provider.GetRequiredService<IMongoClient>().GetDatabase(mongoSettings.DatabaseName));
+//// MongoDB
+//var mongoSettings = builder.Configuration.GetSection("MongoDb").Get<MongoDbSettings>()!;
+//builder.Services.AddSingleton(mongoSettings);
+//builder.Services.AddSingleton<IMongoClient>(_ => new MongoClient(mongoSettings.ConnectionString));
+//builder.Services.AddSingleton<IMongoDatabase>(provider =>provider.GetRequiredService<IMongoClient>().GetDatabase(mongoSettings.DatabaseName));
 
+//builder.Services.AddScoped<MongoDbContext>();
 
 
 // ── MassTransit(Publish - Only + EF Core Outbox) ────────────────────────────

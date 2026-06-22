@@ -6,12 +6,13 @@ using Domain;
 using Domain.Entities;
 using MassTransit;
 using MassTransit.MongoDbIntegration;
+using Microsoft.EntityFrameworkCore;
 using MongoDB.Driver;
 using static MassTransit.ValidationResultExtensions;
 
 namespace Application.Services;
 
-public class OrderService(IUnitOfWork uow, MongoDbContext _dbContext, IPublishEndpoint bus, IMapper mapper) : IOrderService
+public class OrderService(IUnitOfWork uow, MongoDbContext mongoDbContext, IPublishEndpoint bus, IMapper mapper) : IOrderService
 {
     public async Task<List<OrderDto>> GetAllAsync()
     {
@@ -25,6 +26,7 @@ public class OrderService(IUnitOfWork uow, MongoDbContext _dbContext, IPublishEn
         return order is null ? null : mapper.Map<OrderDto>(order);
     }
 
+
     public async Task<OrderDto> CreateAsync(OrderDto request)
     {
         var order = mapper.Map<Order>(request);
@@ -35,25 +37,32 @@ public class OrderService(IUnitOfWork uow, MongoDbContext _dbContext, IPublishEn
 
         order.TotalAmount = order.OrderDetails.Sum(d => d.Total);
 
+        // ── SQL Server transaction ──────────────────────────────
         await uow.BeginTransactionAsync();
         await uow.Orders.AddAsync(order);
-        await uow.SaveChangesAsync();  
+        await uow.SaveChangesAsync();
+
+        // ── MongoDB outbox transaction ──────────────────────────
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-        await _dbContext.BeginTransaction(cts.Token);
+        await mongoDbContext.BeginTransaction(cts.Token);
+
         await bus.Publish(new OrderCreated { Order = mapper.Map<OrderDto>(order) });
+
         try
         {
-            await _dbContext.CommitTransaction(cts.Token);
+            await mongoDbContext.CommitTransaction(cts.Token);
         }
-        catch (MongoCommandException exception) when (exception.CodeName == "DuplicateKey")
+        catch (MongoCommandException ex) when (ex.CodeName == "DuplicateKey")
         {
-            throw new Exception("Duplicate registration", exception);
+            throw new Exception("Duplicate message", ex);
         }
 
+        // ── Commit SQL transaction ──────────────────────────────
         await uow.CommitAsync();
 
         return mapper.Map<OrderDto>(order);
     }
+
 
     public async Task<bool> UpdateAsync(int id, OrderDto request)
     {

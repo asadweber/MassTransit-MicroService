@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Application.Dtos
+namespace Infrastructure
 {
     public class MongoDbSettings
     {
