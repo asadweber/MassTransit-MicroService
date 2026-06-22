@@ -5,11 +5,13 @@ using AutoMapper;
 using Domain;
 using Domain.Entities;
 using MassTransit;
+using MassTransit.MongoDbIntegration;
+using MongoDB.Driver;
 using static MassTransit.ValidationResultExtensions;
 
 namespace Application.Services;
 
-public class OrderService(IUnitOfWork uow, IPublishEndpoint bus, IMapper mapper) : IOrderService
+public class OrderService(IUnitOfWork uow, MongoDbContext _dbContext, IPublishEndpoint bus, IMapper mapper) : IOrderService
 {
     public async Task<List<OrderDto>> GetAllAsync()
     {
@@ -35,9 +37,21 @@ public class OrderService(IUnitOfWork uow, IPublishEndpoint bus, IMapper mapper)
 
         await uow.BeginTransactionAsync();
         await uow.Orders.AddAsync(order);
-        await bus.Publish(new OrderCreated { Order = mapper.Map<OrderDto>(order) });
         await uow.SaveChangesAsync();  
-        await uow.CommitAsync();                                                   
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        await _dbContext.BeginTransaction(cts.Token);
+        await bus.Publish(new OrderCreated { Order = mapper.Map<OrderDto>(order) });
+        try
+        {
+            await _dbContext.CommitTransaction(cts.Token);
+        }
+        catch (MongoCommandException exception) when (exception.CodeName == "DuplicateKey")
+        {
+            throw new Exception("Duplicate registration", exception);
+        }
+
+        await uow.CommitAsync();
+
         return mapper.Map<OrderDto>(order);
     }
 

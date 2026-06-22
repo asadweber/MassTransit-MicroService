@@ -30,8 +30,7 @@ public class OrderController(IOrderService orderService, IPublishEndpoint bus, I
     [SwaggerRequestExample(typeof(OrderDto), typeof(OrderDtoExample))]
     public async Task<IActionResult> Create(OrderDto request)
     {
-        var result = await orderService.CreateAsync(request);
-        await bus.Publish(new OrderCreated { Order = mapper.Map<OrderDto>(result) });
+        var result = await orderService.CreateAsync(request);        
         return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
     }
 

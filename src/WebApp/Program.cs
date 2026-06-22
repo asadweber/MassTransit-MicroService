@@ -3,6 +3,7 @@ using Application.Dtos;
 using Infrastructure;
 using Infrastructure.Persistence;
 using MassTransit;
+using MongoDB.Driver;
 using Swashbuckle.AspNetCore.Filters;
 using WebApp.Services;
 using WebApp.Swagger;
@@ -13,6 +14,14 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApplication();
 
+// MongoDB
+var mongoSettings = builder.Configuration.GetSection("MongoDb").Get<MongoDbSettings>()!;
+builder.Services.AddSingleton(mongoSettings); 
+builder.Services.AddSingleton<IMongoClient>(_ => new MongoClient(mongoSettings.ConnectionString));
+builder.Services.AddSingleton<IMongoDatabase>(provider =>
+    provider.GetRequiredService<IMongoClient>().GetDatabase(mongoSettings.DatabaseName));
+
+
 
 // ── MassTransit(Publish - Only + EF Core Outbox) ────────────────────────────
 builder.Services.AddMassTransit(x =>
@@ -21,20 +30,33 @@ builder.Services.AddMassTransit(x =>
 
     // EF Core Transactional Outbox
     // IPublishEndpoint.Publish() → writes to AppDbContext outbox tables → OutboxDelivery forwards to RabbitMQ
-    x.AddEntityFrameworkOutbox<AppDbContext>(o =>
+    //x.AddEntityFrameworkOutbox<AppDbContext>(o =>
+    //{
+    //    o.UseSqlServer();
+    //    o.QueryDelay = TimeSpan.FromSeconds(1);
+
+    //    // ✅ For publish-only: disable inbox cleanup (no consumers)
+    //    o.DisableInboxCleanupService();
+
+    //    o.UseBusOutbox(b =>
+    //    {
+    //        b.MessageDeliveryLimit = 100;
+    //        b.MessageDeliveryTimeout = TimeSpan.FromSeconds(10);
+    //    });
+    //});
+
+    x.AddMongoDbOutbox(o =>
     {
-        o.UseSqlServer();
         o.QueryDelay = TimeSpan.FromSeconds(1);
+        o.ClientFactory(provider => provider.GetRequiredService<IMongoClient>());
+        o.DatabaseFactory(provider => provider.GetRequiredService<IMongoDatabase>());
 
-        // ✅ For publish-only: disable inbox cleanup (no consumers)
-        o.DisableInboxCleanupService();
+        o.DuplicateDetectionWindow = TimeSpan.FromSeconds(30);
 
-        o.UseBusOutbox(b =>
-        {
-            b.MessageDeliveryLimit = 100;
-            b.MessageDeliveryTimeout = TimeSpan.FromSeconds(10);
-        });
+        o.UseBusOutbox();
     });
+
+
 
     // RabbitMQ Transport
     x.UsingRabbitMq((ctx, cfg) =>
