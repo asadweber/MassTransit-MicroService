@@ -29,15 +29,21 @@ builder.Services.AddMassTransit(x =>
 {
     x.AddBusMetadataExplorer();
 
-    x.AddMongoDbOutbox(o =>
+    // EF Core Transactional Outbox
+    // IPublishEndpoint.Publish() → writes to AppDbContext outbox tables → OutboxDelivery forwards to RabbitMQ
+    x.AddEntityFrameworkOutbox<AppDbContext>(o =>
     {
+        o.UseSqlServer();
         o.QueryDelay = TimeSpan.FromSeconds(1);
-        o.ClientFactory(provider => provider.GetRequiredService<IMongoClient>());
-        o.DatabaseFactory(provider => provider.GetRequiredService<IMongoDatabase>());
 
-        o.DuplicateDetectionWindow = TimeSpan.FromSeconds(30);
+        // ✅ For publish-only: disable inbox cleanup (no consumers)
+        o.DisableInboxCleanupService();
 
-        o.UseBusOutbox();
+        o.UseBusOutbox(b =>
+        {
+            b.MessageDeliveryLimit = 100;
+            b.MessageDeliveryTimeout = TimeSpan.FromSeconds(10);
+        });
     });
 
     // RabbitMQ Transport
