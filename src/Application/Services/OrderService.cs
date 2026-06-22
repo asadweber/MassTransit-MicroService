@@ -12,7 +12,7 @@ using static MassTransit.ValidationResultExtensions;
 
 namespace Application.Services;
 
-public class OrderService(IUnitOfWork uow, MongoDbContext mongoDbContext, IPublishEndpoint bus, IMapper mapper) : IOrderService
+public class OrderService(IUnitOfWork uow, IPublishEndpoint bus, IMapper mapper) : IOrderService
 {
     public async Task<List<OrderDto>> GetAllAsync()
     {
@@ -37,28 +37,15 @@ public class OrderService(IUnitOfWork uow, MongoDbContext mongoDbContext, IPubli
 
         order.TotalAmount = order.OrderDetails.Sum(d => d.Total);
 
-        // ── SQL Server transaction ──────────────────────────────
         await uow.BeginTransactionAsync();
+
         await uow.Orders.AddAsync(order);
-        await uow.SaveChangesAsync();
+        await uow.SaveChangesAsync();                                              // 1) order.Id assigned by DB
 
-        // ── MongoDB outbox transaction ──────────────────────────
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-        await mongoDbContext.BeginTransaction(cts.Token);
+        await bus.Publish(new OrderCreated { Order = mapper.Map<OrderDto>(order) }); // Id is valid
+        await uow.SaveChangesAsync();                                              // 2) flush OutboxMessage row
 
-        await bus.Publish(new OrderCreated { Order = mapper.Map<OrderDto>(order) });
-
-        try
-        {
-            await mongoDbContext.CommitTransaction(cts.Token);
-        }
-        catch (MongoCommandException ex) when (ex.CodeName == "DuplicateKey")
-        {
-            throw new Exception("Duplicate message", ex);
-        }
-
-        // ── Commit SQL transaction ──────────────────────────────
-        await uow.CommitAsync();
+        await uow.CommitAsync();                                                   // both rows commit atomically
 
         return mapper.Map<OrderDto>(order);
     }
