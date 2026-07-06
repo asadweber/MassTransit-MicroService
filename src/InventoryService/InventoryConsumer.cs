@@ -29,7 +29,11 @@ public class InventoryConsumer(ILogger<InventoryConsumer> logger, IOrderService 
                 break;
             }
         }
-        
+        if (isAvailable)
+        {
+            order.Status = "Stock Available";
+            await orderService.UpdateAsync(msg.OrderId, order);
+        }
 
         await context.Publish(new InventoryChecked
         {

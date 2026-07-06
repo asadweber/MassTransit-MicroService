@@ -52,6 +52,8 @@ builder.Services.AddMassTransit(x =>
         cfg.UseNewtonsoftJsonSerializer();
         cfg.UseNewtonsoftJsonDeserializer();
 
+        cfg.UseDelayedMessageScheduler();
+
         cfg.ConfigureEndpoints(ctx);
     });
 });

@@ -2,9 +2,7 @@ using MassTransit;
 
 namespace OrderSaga.Saga;
 
-public class OrderSagaState :
-    SagaStateMachineInstance,
-    ISagaVersion
+public class OrderSagaState :SagaStateMachineInstance,ISagaVersion
 {
     public Guid CorrelationId { get; set; }
 
@@ -13,4 +11,10 @@ public class OrderSagaState :
     public int Version { get; set; }
 
     public int OrderId { get; set; }
+
+    public DateTime? FirstUnavailableAt { get; set; }
+
+    public int InventoryRetryCount { get; set; }
+
+    public Guid? InventoryRetryTokenId { get; set; }
 }
