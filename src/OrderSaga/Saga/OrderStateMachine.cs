@@ -6,6 +6,11 @@ namespace OrderSaga.Saga;
 
 public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
 {
+    public static readonly TimeSpan MaxRetryWindow = TimeSpan.FromDays(5);
+    public static readonly TimeSpan FirstRetryDelay = TimeSpan.FromMinutes(1);
+    public static readonly TimeSpan MaxRetryDelay = TimeSpan.FromDays(1);
+    private const int BackoffFactor = 5;
+
     public State CheckingInventory { get; private set; } = null!;
     public State ProcessingPayment { get; private set; } = null!;
     public State Confirmed { get; private set; } = null!;
@@ -14,6 +19,8 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
     public Event<OrderCreated> OrderCreated { get; private set; } = null!;
     public Event<InventoryChecked> InventoryChecked { get; private set; } = null!;
     public Event<PaymentProcessed> PaymentProcessed { get; private set; } = null!;
+
+    public Schedule<OrderSagaState, RetryCheckInventory> InventoryRetry { get; private set; } = null!;
 
     public OrderStateMachine()
     {
@@ -28,6 +35,12 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
 
         Event(() => PaymentProcessed, x =>
             x.CorrelateById(ctx => ctx.Message.CorrelationId));
+
+        Schedule(() => InventoryRetry, x => x.InventoryRetryTokenId, x =>
+        {
+            x.Delay = FirstRetryDelay;
+            x.Received = r => r.CorrelateById(ctx => ctx.Message.CorrelationId);
+        });
 
         Initially(
             When(OrderCreated)
@@ -45,6 +58,12 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
 
         During(CheckingInventory,
             When(InventoryChecked, x => x.Message.IsAvailable)
+                .Unschedule(InventoryRetry)
+                .Then(ctx =>
+                {
+                    ctx.Saga.FirstUnavailableAt = null;
+                    ctx.Saga.InventoryRetryCount = 0;
+                })
                 .PublishAsync(ctx => ctx.Init<ProcessPayment>(new ProcessPayment
                 {
                     CorrelationId = ctx.Saga.CorrelationId,
@@ -53,7 +72,25 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                 .TransitionTo(ProcessingPayment),
 
             When(InventoryChecked, x => !x.Message.IsAvailable)
-                .TransitionTo(Failed));
+                .IfElse(ctx => IsRetryWindowExpired(ctx.Saga),
+                    stillUnavailable => stillUnavailable
+                        .TransitionTo(Failed),
+                    retry => retry
+                        .Then(ctx =>
+                        {
+                            ctx.Saga.FirstUnavailableAt ??= DateTime.UtcNow;
+                            ctx.Saga.InventoryRetryCount++;
+                        })
+                        .Schedule(InventoryRetry,
+                            ctx => ctx.Init<RetryCheckInventory>(new RetryCheckInventory
+                            {
+                                CorrelationId = ctx.Saga.CorrelationId,
+                                OrderId = ctx.Saga.OrderId,
+                            }),
+                            ctx => GetRetryDelay(ctx.Saga.InventoryRetryCount))),
+
+            When(InventoryRetry.Received)
+                .PublishAsync(ctx => ctx.Init<CheckInventory>(ctx.Message)));
 
         During(ProcessingPayment,
             When(PaymentProcessed, x => x.Message.IsSuccess)
@@ -69,5 +106,21 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                 .TransitionTo(Failed));
 
         SetCompletedWhenFinalized();
+    }
+
+    /// <summary>
+    /// Exponential backoff (x5 per attempt: 1m, 5m, 25m, 125m, ...), capped at <see cref="MaxRetryDelay"/> per step.
+    /// </summary>
+    private static TimeSpan GetRetryDelay(int retryCount)
+    {
+        var delayMinutes = FirstRetryDelay.TotalMinutes * Math.Pow(BackoffFactor, retryCount - 1);
+        var delay = TimeSpan.FromMinutes(delayMinutes);
+        return delay > MaxRetryDelay ? MaxRetryDelay : delay;
+    }
+
+    private static bool IsRetryWindowExpired(OrderSagaState saga)
+    {
+        var firstUnavailableAt = saga.FirstUnavailableAt ?? DateTime.UtcNow;
+        return DateTime.UtcNow - firstUnavailableAt >= MaxRetryWindow;
     }
 }

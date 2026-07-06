@@ -12,9 +12,9 @@ public class OrderSagaState :SagaStateMachineInstance,ISagaVersion
 
     public int OrderId { get; set; }
 
-    //public DateTime? FirstUnavailableAt { get; set; }
+    public DateTime? FirstUnavailableAt { get; set; }
 
-    //public int InventoryRetryCount { get; set; }
+    public int InventoryRetryCount { get; set; }
 
-    //public Guid? InventoryRetryTokenId { get; set; }
+    public Guid? InventoryRetryTokenId { get; set; }
 }
