@@ -263,6 +263,25 @@ graph LR
 
 Serialization is Newtonsoft JSON (`UseNewtonsoftJsonSerializer` / `UseNewtonsoftJsonDeserializer`) on every bus, not the MassTransit default System.Text.Json.
 
+### Two distinct retry mechanisms — don't confuse them
+
+The system has two independent retry layers that solve different problems:
+
+**1. Fault retry (`InventoryService/Program.cs`, `inventory-queue`)** — retries when `InventoryConsumer.Consume` *throws* (DB down, timeout, bug):
+- `UseMessageRetry`: exponential, 5 attempts, 1s → 1min (in-process, fast)
+- `UseDelayedRedelivery`: 6 more attempts over 1h / 6h / 12h / 1d / 3d / 7d (requeue, survives restarts)
+
+This is standard "the operation failed unexpectedly, try again" handling. If you hit a breakpoint in `InventoryConsumer` multiple times for the same message, it's almost always this — the debugger paused past a timeout, or an exception fired, and `UseMessageRetry` redelivered. Not a bug; don't remove it to "fix" repeated breakpoint hits — instead check what's throwing.
+
+**2. Business-condition retry (`OrderStateMachine`, saga-level)** — retries when the inventory check *succeeds* but reports `IsAvailable = false`. This isn't a fault, so fault-retry never sees it:
+- Saga stays in `CheckingInventory`, re-publishes `CheckInventory` on an exponential backoff schedule (`InventoryRetryBackoff`: 10s → 30s → 1min → 10min → 30min, then holds at 30min).
+- Uses MassTransit's `Schedule<>` API (`InventoryRetry`) via `UseDelayedMessageScheduler()` on the RabbitMQ bus (delayed-exchange plugin — requires `rabbitmq_delayed_message_exchange` enabled on the broker).
+- Tracked per-saga: `OrderSagaState.FirstUnavailableAt` (when the wait started) and `InventoryRetryCount` (which backoff step to use next — computed *before* incrementing, so attempt 1 uses index 0/10s, not 30s).
+- Bounded by `InventoryRetryWindow` (10 days, wall-clock from `FirstUnavailableAt`) — once exceeded, the next unavailable check transitions the saga to `Failed` instead of scheduling another retry.
+- On a later `IsAvailable = true`, `.Unschedule(InventoryRetry)` cancels any still-pending scheduled retry before moving to `ProcessingPayment`.
+
+Net effect: a stock-out doesn't fail the order immediately — the saga patiently re-checks for up to 10 days before giving up.
+
 ## Security Analysis
 
 **Not enough evidence found in the repository** for any of the following — none are present:
