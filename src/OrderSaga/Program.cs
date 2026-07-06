@@ -26,17 +26,17 @@ builder.Services.AddMassTransit(x =>
             r.CollectionName = mongoSection.SagaCollection;
         });
 
-    //x.AddEntityFrameworkOutbox<AppDbContext>(o =>
-    //{
-    //    o.UseSqlServer();
-    //    o.QueryDelay = TimeSpan.FromSeconds(1);
+    x.AddEntityFrameworkOutbox<AppDbContext>(o =>
+    {
+        o.UseSqlServer();
+        o.QueryDelay = TimeSpan.FromSeconds(1);
 
-    //    o.UseBusOutbox(b =>
-    //    {
-    //        b.MessageDeliveryLimit = 100;
-    //        b.MessageDeliveryTimeout = TimeSpan.FromSeconds(10);
-    //    });
-    //});
+        o.UseBusOutbox(b =>
+        {
+            b.MessageDeliveryLimit = 100;
+            b.MessageDeliveryTimeout = TimeSpan.FromSeconds(10);
+        });
+    });
 
 
     x.UsingRabbitMq((ctx, cfg) =>
