@@ -2,12 +2,14 @@ using Application.Interfaces;
 using Application.Messaging.Command;
 using Application.Messaging.Events;
 using Application.Services;
+using Domain.Repositories;
+using Infrastructure.Repositories;
 using MassTransit;
 using Microsoft.Extensions.Logging;
 
 namespace InventoryService;
 
-public class InventoryConsumer(ILogger<InventoryConsumer> logger, IOrderService orderService ) : IConsumer<CheckInventory>
+public class InventoryConsumer(ILogger<InventoryConsumer> logger, IOrderService orderService, IProductRepository productRepository ) : IConsumer<CheckInventory>
 {
     public async Task Consume(ConsumeContext<CheckInventory> context)
     {
@@ -16,16 +18,16 @@ public class InventoryConsumer(ILogger<InventoryConsumer> logger, IOrderService 
 
         var order = await orderService.GetByIdAsync(msg.OrderId);
 
-
-        //if (msg.OrderId == 15)
-        //{
-        //    throw new InvalidOperationException("Inventory check failed for order 15");
-        //}
-        // TODO: real inventory check logic
+        foreach (var item in order.OrderDetails)
+        {
+            var hasSufficientStock = await productRepository.HasSufficientStockAsync(item.ProductId, item.OrderQty);
+            if(!hasSufficientStock)
+            {
+                throw new InvalidOperationException("Inventory check failed for order 15");
+            }
+        }
+        
         var isAvailable = true;
-        
-        
-
         await context.Publish(new InventoryChecked
         {
             CorrelationId = msg.CorrelationId,

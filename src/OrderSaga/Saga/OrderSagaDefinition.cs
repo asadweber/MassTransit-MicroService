@@ -20,7 +20,7 @@ namespace OrderSaga.Saga
                     TimeSpan.FromSeconds(30)
                 ));
 
-            endpointConfigurator.UseEntityFrameworkOutbox<AppDbContext>(context);
+            //endpointConfigurator.UseEntityFrameworkOutbox<AppDbContext>(context);
         }
     }
 }
