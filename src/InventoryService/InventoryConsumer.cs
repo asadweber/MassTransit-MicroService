@@ -17,7 +17,7 @@ public class InventoryConsumer(ILogger<InventoryConsumer> logger, IOrderService 
         logger.LogInformation("Checking inventory for Order {OrderId}",msg.OrderId);
 
         var order = await orderService.GetByIdAsync(msg.OrderId);
-
+        var isAvailable = true;
         foreach (var item in order.OrderDetails)
         {
             var hasSufficientStock = await productService.HasSufficientStockAsync(item.ProductId, item.OrderQty);
@@ -25,11 +25,12 @@ public class InventoryConsumer(ILogger<InventoryConsumer> logger, IOrderService 
             {
                 order.Status = "Stock Not Available";
                 await orderService.UpdateAsync(msg.OrderId, order);
+                isAvailable = false;
                 break;
             }
         }
         
-        var isAvailable = true;
+
         await context.Publish(new InventoryChecked
         {
             CorrelationId = msg.CorrelationId,
