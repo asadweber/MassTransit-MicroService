@@ -20,7 +20,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
     public Event<InventoryChecked> InventoryChecked { get; private set; } = null!;
     public Event<PaymentProcessed> PaymentProcessed { get; private set; } = null!;
 
-    public Schedule<OrderSagaState, RetryCheckInventory> InventoryRetry { get; private set; } = null!;
+    public Schedule<OrderSagaState, CheckInventory> InventoryRetry { get; private set; } = null!;
 
     public OrderStateMachine()
     {
@@ -82,7 +82,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                             ctx.Saga.InventoryRetryCount++;
                         })
                         .Schedule(InventoryRetry,
-                            ctx => ctx.Init<RetryCheckInventory>(new RetryCheckInventory
+                            ctx => ctx.Init<CheckInventory>(new CheckInventory
                             {
                                 CorrelationId = ctx.Saga.CorrelationId,
                                 OrderId = ctx.Saga.OrderId,
