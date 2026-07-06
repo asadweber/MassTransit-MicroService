@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 
 namespace InventoryService;
 
-public class InventoryConsumer(ILogger<InventoryConsumer> logger, IOrderService orderService, IProductRepository productRepository ) : IConsumer<CheckInventory>
+public class InventoryConsumer(ILogger<InventoryConsumer> logger, IOrderService orderService, IProductService productService ) : IConsumer<CheckInventory>
 {
     public async Task Consume(ConsumeContext<CheckInventory> context)
     {
@@ -20,10 +20,12 @@ public class InventoryConsumer(ILogger<InventoryConsumer> logger, IOrderService 
 
         foreach (var item in order.OrderDetails)
         {
-            var hasSufficientStock = await productRepository.HasSufficientStockAsync(item.ProductId, item.OrderQty);
-            if(!hasSufficientStock)
+            var hasSufficientStock = await productService.HasSufficientStockAsync(item.ProductId, item.OrderQty);
+            if (!hasSufficientStock)
             {
-                throw new InvalidOperationException("Inventory check failed for order 15");
+                order.Status = "Stock Not Available";
+                await orderService.UpdateAsync(msg.OrderId, order);
+                break;
             }
         }
         

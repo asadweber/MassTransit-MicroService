@@ -30,7 +30,7 @@ public class GenericRepository<T>(AppDbContext context) : IGenericRepository<T> 
         await Set.AddAsync(entity);
     }
 
-    public void Update(T entity)
+    public async Task Update(T entity)
     {
         Set.Update(entity);
     }

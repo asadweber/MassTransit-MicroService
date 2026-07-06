@@ -1,11 +1,10 @@
-using Domain.Entities;
+using Application.Dtos;
 
-namespace Domain.Repositories;
+namespace Application.Interfaces;
 
-public interface IProductRepository : IGenericRepository<Product>
+public interface IProductService
 {
     Task<bool> HasSufficientStockAsync(int productId, int qty);
 
     Task<bool> ReduceStockQtyAsync(int productId, int qty);
-
 }

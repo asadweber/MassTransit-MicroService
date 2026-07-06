@@ -8,6 +8,6 @@ public interface IGenericRepository<T> where T : class
     Task<IReadOnlyList<T>> GetAllAsync();
     Task<IReadOnlyList<T>> FindAsync(Expression<Func<T, bool>> predicate);
     Task AddAsync(T entity);
-    void Update(T entity);
+    Task Update(T entity);
     void Remove(T entity);
 }

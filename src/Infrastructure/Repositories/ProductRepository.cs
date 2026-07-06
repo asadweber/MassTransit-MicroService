@@ -13,4 +13,14 @@ public class ProductRepository(AppDbContext context)
         var product = await Context.Products.FindAsync(productId);
         return product is not null && product.Stock >= qty;
     }
+
+    public async Task<bool> ReduceStockQtyAsync(int productId, int qty)
+    {
+        var product = await Context.Products.FindAsync(productId);
+        if (product is null || product.Stock < qty) return false;
+
+        product.Stock -= qty;
+        await Context.SaveChangesAsync();
+        return true;
+    }
 }
