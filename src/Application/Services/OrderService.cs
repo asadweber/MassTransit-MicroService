@@ -38,9 +38,13 @@ public class OrderService(IUnitOfWork uow, IPublishEndpoint bus, IMapper mapper)
         order.TotalAmount = order.OrderDetails.Sum(d => d.Total);
 
         await uow.BeginTransactionAsync();
+
         await uow.Orders.AddAsync(order);
+        await uow.SaveChangesAsync();                                              // 1) order.Id assigned by DB
+
         await bus.Publish(new OrderCreated { Order = mapper.Map<OrderDto>(order) }); // Id is valid
         await uow.SaveChangesAsync();                                              // 2) flush OutboxMessage row
+
         await uow.CommitAsync();                                                   // both rows commit atomically
 
         return mapper.Map<OrderDto>(order);
