@@ -16,7 +16,7 @@ builder.Services.AddMassTransit(x =>
 {
     x.AddBusMetadataExplorer();
 
-    x.AddConsumer<InventoryConsumer, InventoryConsumerDefinition>();
+    x.AddConsumer<InventoryConsumer>();
 
     x.AddEntityFrameworkOutbox<AppDbContext>(o =>
     {

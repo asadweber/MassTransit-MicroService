@@ -14,7 +14,7 @@ builder.Services.AddApplication();
 builder.Services.AddMassTransit(x =>
 {
     x.AddBusMetadataExplorer();
-    x.AddConsumer<NotificationConsumer, NotificationConsumerDefinition>();
+    x.AddConsumer<NotificationConsumer>();
 
     x.AddEntityFrameworkOutbox<AppDbContext>(o =>
     {

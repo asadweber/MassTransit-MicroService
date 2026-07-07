@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 
 namespace NotificationService;
 
+[ExcludeFromConfigureEndpoints]
 public class NotificationConsumer(ILogger<NotificationConsumer> logger) : IConsumer<OrderConfirmed>
 {
     public async Task Consume(ConsumeContext<OrderConfirmed> context)

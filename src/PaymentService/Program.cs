@@ -13,7 +13,7 @@ builder.Services.AddApplication();
 builder.Services.AddMassTransit(x =>
 {
     x.AddBusMetadataExplorer();
-    x.AddConsumer<PaymentConsumer, PaymentConsumerDefinition>();
+    x.AddConsumer<PaymentConsumer>();
 
     x.AddEntityFrameworkOutbox<AppDbContext>(o =>
     {

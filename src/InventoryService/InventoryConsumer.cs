@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 
 namespace InventoryService;
 
+[ExcludeFromConfigureEndpoints]
 public class InventoryConsumer(ILogger<InventoryConsumer> logger, IOrderService orderService, IProductService productService ) : IConsumer<CheckInventory>
 {
     public async Task Consume(ConsumeContext<CheckInventory> context)
