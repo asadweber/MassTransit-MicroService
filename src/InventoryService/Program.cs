@@ -50,6 +50,10 @@ builder.Services.AddMassTransit(x =>
         cfg.UseNewtonsoftJsonSerializer();
         cfg.UseNewtonsoftJsonDeserializer();
 
+        // Required for UseDelayedRedelivery below — schedules redelivery via the
+        // RabbitMQ delayed-exchange plugin (rabbitmq_delayed_message_exchange).
+        cfg.UseDelayedMessageScheduler();
+
         // Manual endpoint — Inventory Service owns this queue.
         cfg.ReceiveEndpoint("inventory-queue", e =>
         {
@@ -68,10 +72,12 @@ builder.Services.AddMassTransit(x =>
                     intervalDelta: TimeSpan.FromSeconds(5));
             });
 
-            // Long-term redelivery once fast retries are exhausted (hours to days).
             e.UseDelayedRedelivery(r =>
             {
                 r.Intervals(
+                    TimeSpan.FromMinutes(5),
+                    TimeSpan.FromMinutes(10),
+                    TimeSpan.FromMinutes(30),
                     TimeSpan.FromHours(1),
                     TimeSpan.FromHours(6),
                     TimeSpan.FromHours(12),

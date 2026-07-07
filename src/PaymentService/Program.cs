@@ -39,6 +39,10 @@ builder.Services.AddMassTransit(x =>
         cfg.UseNewtonsoftJsonSerializer();
         cfg.UseNewtonsoftJsonDeserializer();
 
+        // Required for UseDelayedRedelivery below — schedules redelivery via the
+        // RabbitMQ delayed-exchange plugin (rabbitmq_delayed_message_exchange).
+        cfg.UseDelayedMessageScheduler();
+
         // ✅ Manual endpoint — Inventory Service owns this queue
         cfg.ReceiveEndpoint("payment-queue", e =>
         {
@@ -47,13 +51,29 @@ builder.Services.AddMassTransit(x =>
             e.PrefetchCount = 16;
             e.ConcurrentMessageLimit = 8;
 
-            // ✅ Retry — outermost, wraps everything
+            // Fast retries for transient failures (5 attempts, 1s-1m exponential backoff).
             e.UseMessageRetry(r =>
+            {
+                r.Exponential(
+                    retryLimit: 5,
+                    minInterval: TimeSpan.FromSeconds(1),
+                    maxInterval: TimeSpan.FromMinutes(1),
+                    intervalDelta: TimeSpan.FromSeconds(5));
+            });
+
+            e.UseDelayedRedelivery(r =>
+            {
                 r.Intervals(
-                    TimeSpan.FromSeconds(5),
-                    TimeSpan.FromSeconds(15),
-                    TimeSpan.FromSeconds(30)
-                ));
+                    TimeSpan.FromMinutes(5),
+                    TimeSpan.FromMinutes(10),
+                    TimeSpan.FromMinutes(30),
+                    TimeSpan.FromHours(1),
+                    TimeSpan.FromHours(6),
+                    TimeSpan.FromHours(12),
+                    TimeSpan.FromDays(1),
+                    TimeSpan.FromDays(3),
+                    TimeSpan.FromDays(7));
+            });
 
             // ✅ EF Core outbox — atomic with the DB transaction
             e.UseEntityFrameworkOutbox<AppDbContext>(ctx);

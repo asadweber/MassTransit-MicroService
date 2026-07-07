@@ -52,7 +52,10 @@ builder.Services.AddMassTransit(x =>
         cfg.UseNewtonsoftJsonSerializer();
         cfg.UseNewtonsoftJsonDeserializer();
 
+        // Required for UseDelayedRedelivery below — schedules redelivery via the
+        // RabbitMQ delayed-exchange plugin (rabbitmq_delayed_message_exchange).
         cfg.UseDelayedMessageScheduler();
+
 
         cfg.ConfigureEndpoints(ctx);
     });
