@@ -23,20 +23,6 @@ builder.Services.AddMassTransit(x =>
     // AddAllConsumers, but only this one wires it to a real queue below).
     x.AddConsumer<InventoryConsumer>();
 
-    // Transactional outbox: publishes only take effect once the enclosing
-    // DB transaction commits, keeping DB writes and message sends atomic.
-    x.AddEntityFrameworkOutbox<AppDbContext>(o =>
-    {
-        o.UseSqlServer();                       // outbox table lives in SQL Server
-        o.QueryDelay = TimeSpan.FromSeconds(1); // how often the outbox is polled for pending messages
-
-        o.UseBusOutbox(b =>
-        {
-            b.MessageDeliveryLimit = 100;                      // max messages delivered per outbox pass
-            b.MessageDeliveryTimeout = TimeSpan.FromSeconds(10); // per-delivery timeout
-        });
-    });
-
     x.UsingRabbitMq((ctx, cfg) =>
     {
         var rmq = builder.Configuration.GetSection("RabbitMQ");
@@ -85,9 +71,6 @@ builder.Services.AddMassTransit(x =>
                     TimeSpan.FromDays(3),
                     TimeSpan.FromDays(7));
             });
-
-            // EF Core outbox — atomic with the DB transaction.
-            e.UseEntityFrameworkOutbox<AppDbContext>(ctx);
 
             // Consumer — always configured last, innermost in the pipeline.
             e.ConfigureConsumer<InventoryConsumer>(ctx);

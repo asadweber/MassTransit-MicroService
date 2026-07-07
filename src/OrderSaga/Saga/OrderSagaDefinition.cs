@@ -14,13 +14,28 @@ namespace OrderSaga.Saga
             IRegistrationContext context)
         {
             endpointConfigurator.UseMessageRetry(r =>
-                r.Intervals(
-                    TimeSpan.FromSeconds(5),
-                    TimeSpan.FromSeconds(15),
-                    TimeSpan.FromSeconds(30)
-                ));
+            {
+                r.Exponential(
+                    retryLimit: 5,
+                    minInterval: TimeSpan.FromSeconds(1),
+                    maxInterval: TimeSpan.FromMinutes(1),
+                    intervalDelta: TimeSpan.FromSeconds(5));
+            });
 
-            endpointConfigurator.UseEntityFrameworkOutbox<AppDbContext>(context);
+            endpointConfigurator.UseDelayedRedelivery(r =>
+            {
+                r.Intervals(
+                    TimeSpan.FromMinutes(5),
+                    TimeSpan.FromMinutes(10),
+                    TimeSpan.FromMinutes(30),
+                    TimeSpan.FromHours(1),
+                    TimeSpan.FromHours(6),
+                    TimeSpan.FromHours(12),
+                    TimeSpan.FromDays(1),
+                    TimeSpan.FromDays(3),
+                    TimeSpan.FromDays(7));
+            });
+
         }
     }
 }
