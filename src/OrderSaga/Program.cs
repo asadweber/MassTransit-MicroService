@@ -7,7 +7,7 @@ using Serilog;
 
 var builder = Host.CreateApplicationBuilder(args);
 
-SerilogRetentionSetup.EnsureSerilogTtlIndex(builder.Configuration, retentionDays: 1);
+
 // Serilog config lives entirely in appsettings.json ("Serilog" section).
 builder.Services.AddSerilog(cfg => cfg.ReadFrom.Configuration(builder.Configuration));
 
@@ -72,5 +72,8 @@ using (var scope = host.Services.CreateScope())
         await database.CreateCollectionAsync(collectionName);
     }
 }
+
+//Ensure Serilog TTL index exists (or recreate if retention period changed)
+SerilogRetentionSetup.EnsureSerilogTtlIndex(builder.Configuration, retentionDays: 1);
 
 host.Run();
