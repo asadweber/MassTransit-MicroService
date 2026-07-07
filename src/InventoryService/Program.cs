@@ -1,3 +1,4 @@
+using Application.Messaging.Command;   // CheckInventory
 using Application;              // AddApplication DI extension
 using Infrastructure;           // AddInfrastructure DI extension
 using InventoryService;         // InventoryConsumer
@@ -48,8 +49,8 @@ builder.Services.AddMassTransit(x =>
         {
             e.Durable = true;               // queue survives broker restart
             e.AutoDelete = false;           // keep queue when no consumers connected
-            e.PrefetchCount = 64;           // messages fetched per consumer before ack
-            e.ConcurrentMessageLimit = 32;  // max messages processed in parallel
+            e.PrefetchCount = 32;           // messages fetched per consumer before ack
+            e.ConcurrentMessageLimit = 8;  // max messages processed in parallel
 
             // Fast retries for transient failures (5 attempts, 1s-1m exponential backoff).
             e.UseMessageRetry(r =>
@@ -74,6 +75,11 @@ builder.Services.AddMassTransit(x =>
                     TimeSpan.FromDays(3),
                     TimeSpan.FromDays(7));
             });
+
+            // Keeps messages for the same order (CorrelationId) processed in order,
+            // even though ConcurrentMessageLimit allows 8 messages in parallel.
+            var partitioner = e.CreatePartitioner(e.ConcurrentMessageLimit ?? 8);
+            e.UsePartitioner<CheckInventory>(partitioner, m => m.Message.CorrelationId);
 
             // Consumer — always configured last, innermost in the pipeline.
             e.ConfigureConsumer<InventoryConsumer>(ctx);

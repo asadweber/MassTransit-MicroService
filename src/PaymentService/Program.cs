@@ -1,4 +1,6 @@
 using Application;
+using Application.Messaging.Command;
+using Application.Messaging.Events;
 using Infrastructure;
 using Infrastructure.Persistence;
 using MassTransit;
@@ -41,7 +43,7 @@ builder.Services.AddMassTransit(x =>
         {
             e.Durable = true;
             e.AutoDelete = false;
-            e.PrefetchCount = 16;
+            e.PrefetchCount = 32;
             e.ConcurrentMessageLimit = 8;
 
             // Fast retries for transient failures (5 attempts, 1s-1m exponential backoff).
@@ -67,6 +69,11 @@ builder.Services.AddMassTransit(x =>
                     TimeSpan.FromDays(3),
                     TimeSpan.FromDays(7));
             });
+            // Keeps messages for the same order (CorrelationId) processed in order,
+            // even though ConcurrentMessageLimit allows 8 messages in parallel.
+            var partitioner = e.CreatePartitioner(e.ConcurrentMessageLimit ?? 8);
+            e.UsePartitioner<ProcessPayment>(partitioner, m => m.Message.CorrelationId);
+
 
             // ✅ Consumer — always last
             e.ConfigureConsumer<PaymentConsumer>(ctx);

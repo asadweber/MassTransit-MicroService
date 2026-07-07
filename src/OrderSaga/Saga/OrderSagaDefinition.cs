@@ -13,6 +13,19 @@ namespace OrderSaga.Saga
             ISagaConfigurator<OrderSagaState> sagaConfigurator,
             IRegistrationContext context)
         {
+
+            // Broker-level buffer: how many unacked messages RabbitMQ will push at once
+            endpointConfigurator.PrefetchCount = 32;
+
+            // In-process concurrency: how many messages MassTransit processes simultaneously
+            endpointConfigurator.ConcurrentMessageLimit = 8;
+
+            
+            if (endpointConfigurator is IRabbitMqReceiveEndpointConfigurator rabbitMqEndpointConfigurator)
+            {
+                rabbitMqEndpointConfigurator.Durable = true;
+                rabbitMqEndpointConfigurator.AutoDelete = false;
+            }
             endpointConfigurator.UseMessageRetry(r =>
             {
                 r.Exponential(
@@ -36,6 +49,9 @@ namespace OrderSaga.Saga
                     TimeSpan.FromDays(7));
             });
 
+            // Ensures messages for the same saga (CorrelationId) are processed in order,
+            // even though ConcurrentMessageLimit allows multiple sagas in parallel.
+            sagaConfigurator.UsePartitioner(endpointConfigurator.ConcurrentMessageLimit ?? 8, x => x.Saga.CorrelationId);
         }
     }
 }
