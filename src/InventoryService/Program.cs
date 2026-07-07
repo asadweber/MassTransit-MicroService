@@ -76,9 +76,14 @@ builder.Services.AddMassTransit(x =>
                     TimeSpan.FromDays(7));
             });
 
-            // Keeps messages for the same order (CorrelationId) processed in order,
+            // Keeps messages for the same inventory correlation processed in order,
             // even though ConcurrentMessageLimit allows 8 messages in parallel.
-            var partitioner = e.CreatePartitioner(e.ConcurrentMessageLimit ?? 8);
+            // NOTE: this only protects CheckInventory. If InventoryConsumer also
+            // handles other message types on this endpoint (e.g. ReleaseInventory,
+            // AdjustStock) that can mutate the same inventory row, add a partitioner
+            // for each of those types too — otherwise those messages get zero
+            // serialization protection against concurrent mutation of the same item.
+            var partitioner = e.CreatePartitioner(8);
             e.UsePartitioner<CheckInventory>(partitioner, m => m.Message.CorrelationId);
 
             // Consumer — always configured last, innermost in the pipeline.
@@ -88,6 +93,14 @@ builder.Services.AddMassTransit(x =>
         // Registers endpoints for all other consumers/saga too (they're excluded
         // via ExcludeFromConfigureEndpoints in AddAllConsumers) so the dashboard
         // still sees the full message topology across services.
+        //
+        // IMPORTANT: before shipping, verify InventoryConsumer is actually excluded
+        // here — e.g. add a startup assertion or integration test confirming only
+        // ONE queue in RabbitMQ is bound to CheckInventory. If the exclusion is ever
+        // missed, MassTransit will create a second auto-named queue bound to the
+        // same message type, and RabbitMQ will deliver every CheckInventory message
+        // to both queues — double-processing with none of the retry/redelivery/
+        // partitioner protection configured above.
         cfg.ConfigureEndpoints(ctx);
     });
 });
