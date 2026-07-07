@@ -1,11 +1,7 @@
 using Application.Interfaces;
 using Application.Messaging.Command;
 using Application.Messaging.Events;
-using Application.Services;
-using Domain.Repositories;
-using Infrastructure.Repositories;
 using MassTransit;
-using Microsoft.Extensions.Logging;
 
 namespace InventoryService;
 
@@ -15,7 +11,10 @@ public class InventoryConsumer(ILogger<InventoryConsumer> logger, IOrderService 
     public async Task Consume(ConsumeContext<CheckInventory> context)
     {
         var msg = context.Message;
-        logger.LogInformation("Order {OrderId} [{CorrelationId}]: checking inventory", msg.OrderId, msg.CorrelationId);
+        using var _ = Serilog.Context.LogContext.PushProperty("CorrelationId", msg.CorrelationId);
+        using var __ = Serilog.Context.LogContext.PushProperty("OrderId", msg.OrderId);
+
+        logger.LogInformation("Checking inventory");
 
         var order = await orderService.GetByIdAsync(msg.OrderId);
         var isAvailable = true;
@@ -23,7 +22,7 @@ public class InventoryConsumer(ILogger<InventoryConsumer> logger, IOrderService 
         {
             //if (item.ProductId == 1)
             //{
-            //    logger.LogWarning("Simulated failure for Order {OrderId}, redelivery count {RedeliveryCount}", msg.OrderId, context.GetRedeliveryCount());
+            //    logger.LogWarning("Simulated failure, redelivery count {RedeliveryCount}", context.GetRedeliveryCount());
             //    throw new HttpRequestException("Inventory service unavailable");
             //}
 
@@ -42,9 +41,7 @@ public class InventoryConsumer(ILogger<InventoryConsumer> logger, IOrderService 
             await orderService.UpdateAsync(msg.OrderId, order);
         }
 
-        logger.LogInformation(
-            "Order {OrderId} [{CorrelationId}]: inventory check result -> IsAvailable={IsAvailable}",
-            msg.OrderId, msg.CorrelationId, isAvailable);
+        logger.LogInformation("Inventory check result -> IsAvailable={IsAvailable}", isAvailable);
 
         await context.Publish(new InventoryChecked
         {

@@ -1,7 +1,6 @@
 using Application.Messaging.Command;
 using Application.Messaging.Events;
 using MassTransit;
-using Microsoft.Extensions.Logging;
 
 namespace OrderSaga.Saga;
 
@@ -82,7 +81,8 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                 .Then(ctx =>
                 {
                     ctx.Saga.OrderId = ctx.Message.Order.Id;
-
+                    Serilog.Context.LogContext.PushProperty("CorrelationId", ctx.Saga.CorrelationId);
+                    Serilog.Context.LogContext.PushProperty("OrderId", ctx.Saga.OrderId);
                 })
                 .PublishAsync(ctx => ctx.Init<CheckInventory>(new CheckInventory
                 {
@@ -90,9 +90,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                     OrderId = ctx.Saga.OrderId,
                 }))
                 .TransitionTo(CheckingInventory)
-                .Then(ctx => _logger.LogInformation(
-                    "Order {OrderId} [{CorrelationId}]: OrderCreated -> CheckingInventory",
-                    ctx.Saga.OrderId, ctx.Saga.CorrelationId)));
+                .Then(ctx => _logger.LogInformation("OrderCreated -> CheckingInventory")));
 
         // Handle the three ways CheckingInventory can resolve: available now, still
         // unavailable (retry or give up), or a scheduled retry firing.
@@ -103,6 +101,8 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                 {
                     ctx.Saga.FirstUnavailableAt = null;
                     ctx.Saga.InventoryRetryCount = 0;
+                    Serilog.Context.LogContext.PushProperty("CorrelationId", ctx.Saga.CorrelationId);
+                    Serilog.Context.LogContext.PushProperty("OrderId", ctx.Saga.OrderId);
                 })
                 .PublishAsync(ctx => ctx.Init<ProcessPayment>(new ProcessPayment
                 {
@@ -110,9 +110,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                     OrderId = ctx.Saga.OrderId,
                 }))
                 .TransitionTo(ProcessingPayment)
-                .Then(ctx => _logger.LogInformation(
-                    "Order {OrderId} [{CorrelationId}]: InventoryChecked (available) -> ProcessingPayment",
-                    ctx.Saga.OrderId, ctx.Saga.CorrelationId)),
+                .Then(ctx => _logger.LogInformation("InventoryChecked (available) -> ProcessingPayment")),
 
             // Still unavailable: give up only once MaxRetryWindow (7d from first-seen-unavailable)
             // has elapsed; otherwise schedule another check with growing backoff.

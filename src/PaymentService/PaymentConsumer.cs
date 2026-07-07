@@ -5,6 +5,7 @@ using Domain.Repositories;
 using MassTransit;
 using Microsoft.Extensions.Logging;
 
+
 namespace PaymentService;
 
 [ExcludeFromConfigureEndpoints]
@@ -13,8 +14,10 @@ public class PaymentConsumer(ILogger<PaymentConsumer> logger, IOrderService orde
     public async Task Consume(ConsumeContext<ProcessPayment> context)
     {
         var msg = context.Message;
-        logger.LogInformation("Order {OrderId} [{CorrelationId}]: processing payment, Amount={Amount}",
-            msg.OrderId, msg.CorrelationId, msg.Amount);
+        using var _ = Serilog.Context.LogContext.PushProperty("CorrelationId", msg.CorrelationId);
+        using var __ = Serilog.Context.LogContext.PushProperty("OrderId", msg.OrderId);
+
+        logger.LogInformation("Processing payment, Amount={Amount}", msg.Amount);
 
         // TODO: real payment processing logic
         var isSuccess = true;
@@ -26,9 +29,7 @@ public class PaymentConsumer(ILogger<PaymentConsumer> logger, IOrderService orde
         //   await productService.ReduceStockQtyAsync(item.ProductId, item.OrderQty);
         //}
 
-        logger.LogInformation(
-            "Order {OrderId} [{CorrelationId}]: payment result -> IsSuccess={IsSuccess}",
-            msg.OrderId, msg.CorrelationId, isSuccess);
+        logger.LogInformation("Payment result -> IsSuccess={IsSuccess}", isSuccess);
 
         await context.Publish(new PaymentProcessed
         {

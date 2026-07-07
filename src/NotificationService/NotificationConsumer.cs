@@ -10,9 +10,12 @@ public class NotificationConsumer(ILogger<NotificationConsumer> logger) : IConsu
     public async Task Consume(ConsumeContext<OrderConfirmed> context)
     {
         var msg = context.Message;
+        using var _ = Serilog.Context.LogContext.PushProperty("CorrelationId", msg.CorrelationId);
+        using var __ = Serilog.Context.LogContext.PushProperty("OrderId", msg.OrderId);
+
         logger.LogInformation(
-            "Order {OrderId} [{CorrelationId}]: confirmed for {CustomerName}, Total={TotalAmount}. Notification sent.",
-            msg.OrderId, msg.CorrelationId, msg.CustomerName, msg.TotalAmount);
+            "Confirmed for {CustomerName}, Total={TotalAmount}. Notification sent.",
+            msg.CustomerName, msg.TotalAmount);
 
         // TODO: send email / push notification
         await Task.CompletedTask;
