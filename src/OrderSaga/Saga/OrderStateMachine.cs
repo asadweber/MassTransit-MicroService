@@ -5,7 +5,7 @@ using MassTransit;
 namespace OrderSaga.Saga;
 
 /// <summary>
-/// Order-processing saga: OrderCreated -&gt; CheckingInventory -&gt; ProcessingPayment -&gt; Confirmed,
+/// Order-processing saga: OrderCreated -> CheckingInventory -> ProcessingPayment -> Confirmed,
 /// with a Failed dead-end on inventory-unavailable-past-window or payment failure.
 /// Persisted via EF Core (<see cref="OrderSagaState"/>) so state survives process restarts.
 /// </summary>
@@ -13,26 +13,34 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
 {
     // Give up polling inventory after 7 days of continuous unavailability.
     public static readonly TimeSpan MaxRetryWindow = TimeSpan.FromDays(7);
+  
     // Delay before the first inventory re-check.
     public static readonly TimeSpan FirstRetryDelay = TimeSpan.FromMinutes(1);
+    
     // Ceiling for any single backoff step, however large BackoffFactor grows it.
     public static readonly TimeSpan MaxRetryDelay = TimeSpan.FromDays(1);
+    
     // Multiplier applied per retry attempt (1m, 5m, 25m, 125m, ...).
     private const int BackoffFactor = 5;
 
     // Waiting on InventoryChecked after publishing CheckInventory.
     public State CheckingInventory { get; private set; } = null!;
+    
     // Waiting on PaymentProcessed after publishing ProcessPayment.
     public State ProcessingPayment { get; private set; } = null!;
+    
     // Terminal success state; saga finalizes here.
     public State Confirmed { get; private set; } = null!;
+    
     // Terminal failure state (inventory exhausted retries, or payment declined).
     public State Failed { get; private set; } = null!;
 
     // Starts a new saga instance.
     public Event<OrderCreated> OrderCreated { get; private set; } = null!;
+    
     // Reply from InventoryService indicating stock availability.
     public Event<InventoryChecked> InventoryChecked { get; private set; } = null!;
+    
     // Reply from PaymentService indicating charge outcome.
     public Event<PaymentProcessed> PaymentProcessed { get; private set; } = null!;
 

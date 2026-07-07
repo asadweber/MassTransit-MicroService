@@ -21,6 +21,11 @@ public class InventoryConsumer(ILogger<InventoryConsumer> logger, IOrderService 
         var isAvailable = true;
         foreach (var item in order.OrderDetails)
         {
+            if (item.ProductId == 1)
+            {
+                throw new Exception("InventoryService is down");
+            }
+
             var hasSufficientStock = await productService.HasSufficientStockAsync(item.ProductId, item.OrderQty);
             if (!hasSufficientStock)
             {
