@@ -6,7 +6,7 @@ namespace OrderSaga.Saga;
 
 public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
 {
-    public static readonly TimeSpan MaxRetryWindow = TimeSpan.FromDays(5);
+    public static readonly TimeSpan MaxRetryWindow = TimeSpan.FromDays(7);
     public static readonly TimeSpan FirstRetryDelay = TimeSpan.FromMinutes(1);
     public static readonly TimeSpan MaxRetryDelay = TimeSpan.FromDays(1);
     private const int BackoffFactor = 5;
@@ -26,6 +26,8 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
     {
         InstanceState(x => x.CurrentState);
 
+        // First event for a saga instance: correlate by OrderId (no CorrelationId exists yet)
+        // and mint a new one. All later events correlate by that generated CorrelationId.
         Event(() => OrderCreated, x =>
             x.CorrelateBy((state, ctx) => state.OrderId == ctx.Message.Order.Id)
              .SelectId(_ => NewId.NextGuid()));
@@ -36,6 +38,8 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
         Event(() => PaymentProcessed, x =>
             x.CorrelateById(ctx => ctx.Message.CorrelationId));
 
+        // Business-level retry for "not available yet" (no exception thrown), distinct from
+        // transport-level UseMessageRetry/UseDelayedRedelivery which only handle faulted messages.
         Schedule(() => InventoryRetry, x => x.InventoryRetryTokenId, x =>
         {
             x.Delay = FirstRetryDelay;
@@ -71,6 +75,8 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                 }))
                 .TransitionTo(ProcessingPayment),
 
+            // Still unavailable: give up only once MaxRetryWindow (7d from first-seen-unavailable)
+            // has elapsed; otherwise schedule another check with growing backoff.
             When(InventoryChecked, x => !x.Message.IsAvailable)
                 .IfElse(ctx => IsRetryWindowExpired(ctx.Saga),
                     stillUnavailable => stillUnavailable
@@ -89,6 +95,8 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                             }),
                             ctx => GetRetryDelay(ctx.Saga.InventoryRetryCount))),
 
+            // Fires when the scheduled delay elapses (token stored via InventoryRetryTokenId) —
+            // re-publish CheckInventory to poll availability again.
             When(InventoryRetry.Received)
                 .PublishAsync(ctx => ctx.Init<CheckInventory>(ctx.Message)));
 
