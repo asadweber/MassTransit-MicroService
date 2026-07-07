@@ -13,8 +13,8 @@ public class PaymentConsumer(ILogger<PaymentConsumer> logger, IOrderService orde
     public async Task Consume(ConsumeContext<ProcessPayment> context)
     {
         var msg = context.Message;
-        logger.LogInformation("Processing payment for Order {OrderId}, Amount: {Amount}",
-            msg.OrderId, msg.Amount);
+        logger.LogInformation("Order {OrderId} [{CorrelationId}]: processing payment, Amount={Amount}",
+            msg.OrderId, msg.CorrelationId, msg.Amount);
 
         // TODO: real payment processing logic
         var isSuccess = true;
@@ -25,6 +25,10 @@ public class PaymentConsumer(ILogger<PaymentConsumer> logger, IOrderService orde
         //{
         //   await productService.ReduceStockQtyAsync(item.ProductId, item.OrderQty);
         //}
+
+        logger.LogInformation(
+            "Order {OrderId} [{CorrelationId}]: payment result -> IsSuccess={IsSuccess}",
+            msg.OrderId, msg.CorrelationId, isSuccess);
 
         await context.Publish(new PaymentProcessed
         {

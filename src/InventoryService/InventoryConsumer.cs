@@ -15,7 +15,7 @@ public class InventoryConsumer(ILogger<InventoryConsumer> logger, IOrderService 
     public async Task Consume(ConsumeContext<CheckInventory> context)
     {
         var msg = context.Message;
-        logger.LogInformation("Checking inventory for Order {OrderId}",msg.OrderId);
+        logger.LogInformation("Order {OrderId} [{CorrelationId}]: checking inventory", msg.OrderId, msg.CorrelationId);
 
         var order = await orderService.GetByIdAsync(msg.OrderId);
         var isAvailable = true;
@@ -41,6 +41,10 @@ public class InventoryConsumer(ILogger<InventoryConsumer> logger, IOrderService 
             order.Status = "Stock Available";
             await orderService.UpdateAsync(msg.OrderId, order);
         }
+
+        logger.LogInformation(
+            "Order {OrderId} [{CorrelationId}]: inventory check result -> IsAvailable={IsAvailable}",
+            msg.OrderId, msg.CorrelationId, isAvailable);
 
         await context.Publish(new InventoryChecked
         {

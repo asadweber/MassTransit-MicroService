@@ -11,8 +11,8 @@ public class NotificationConsumer(ILogger<NotificationConsumer> logger) : IConsu
     {
         var msg = context.Message;
         logger.LogInformation(
-            "Order {OrderId} confirmed for {CustomerName}. Total: {TotalAmount}. Notification sent.",
-            msg.OrderId, msg.CustomerName, msg.TotalAmount);
+            "Order {OrderId} [{CorrelationId}]: confirmed for {CustomerName}, Total={TotalAmount}. Notification sent.",
+            msg.OrderId, msg.CorrelationId, msg.CustomerName, msg.TotalAmount);
 
         // TODO: send email / push notification
         await Task.CompletedTask;
