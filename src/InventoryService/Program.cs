@@ -1,32 +1,39 @@
-using Application;
-using Application.Messaging;
-using Infrastructure;
-using Infrastructure.Persistence;
-using InventoryService;
-using MassTransit;
+using Application;              // AddApplication DI extension
+using Infrastructure;           // AddInfrastructure DI extension
+using Infrastructure.Persistence; // AppDbContext (EF Core, used by outbox)
+using InventoryService;         // InventoryConsumer
+using MassTransit;              // bus, outbox, retry, RabbitMQ transport
 
 
+// Worker host — no HTTP surface, just the bus.
 var builder = Host.CreateApplicationBuilder(args);
 
+// Registers DbContext + repositories (needed by the EF outbox below).
 builder.Services.AddInfrastructure(builder.Configuration);
+// Registers application-layer services (IOrderService, AutoMapper, etc.).
 builder.Services.AddApplication();
 
 
 builder.Services.AddMassTransit(x =>
 {
+    // Exposes bus/consumer metadata so WebApp's dashboard can show it.
     x.AddBusMetadataExplorer();
 
+    // This service owns InventoryConsumer (registered in every service via
+    // AddAllConsumers, but only this one wires it to a real queue below).
     x.AddConsumer<InventoryConsumer>();
 
+    // Transactional outbox: publishes only take effect once the enclosing
+    // DB transaction commits, keeping DB writes and message sends atomic.
     x.AddEntityFrameworkOutbox<AppDbContext>(o =>
     {
-        o.UseSqlServer();
-        o.QueryDelay = TimeSpan.FromSeconds(1);
+        o.UseSqlServer();                       // outbox table lives in SQL Server
+        o.QueryDelay = TimeSpan.FromSeconds(1); // how often the outbox is polled for pending messages
 
         o.UseBusOutbox(b =>
         {
-            b.MessageDeliveryLimit = 100;
-            b.MessageDeliveryTimeout = TimeSpan.FromSeconds(10);
+            b.MessageDeliveryLimit = 100;                      // max messages delivered per outbox pass
+            b.MessageDeliveryTimeout = TimeSpan.FromSeconds(10); // per-delivery timeout
         });
     });
 
@@ -39,19 +46,19 @@ builder.Services.AddMassTransit(x =>
             h.Password(rmq["Password"]!);
         });
 
+        // Use Newtonsoft (not default System.Text.Json) for message (de)serialization.
         cfg.UseNewtonsoftJsonSerializer();
         cfg.UseNewtonsoftJsonDeserializer();
 
-        // ✅ Manual endpoint — Inventory Service owns this queue
+        // Manual endpoint — Inventory Service owns this queue.
         cfg.ReceiveEndpoint("inventory-queue", e =>
         {
-            e.Durable = true;
-            e.AutoDelete = false;
-            e.PrefetchCount = 64;
-            e.ConcurrentMessageLimit = 32;
+            e.Durable = true;               // queue survives broker restart
+            e.AutoDelete = false;           // keep queue when no consumers connected
+            e.PrefetchCount = 64;           // messages fetched per consumer before ack
+            e.ConcurrentMessageLimit = 32;  // max messages processed in parallel
 
-            // ✅ Retry — Wait time increases exponentially.
-            // Fast retries for temporary failures
+            // Fast retries for transient failures (5 attempts, 1s-1m exponential backoff).
             e.UseMessageRetry(r =>
             {
                 r.Exponential(
@@ -61,7 +68,7 @@ builder.Services.AddMassTransit(x =>
                     intervalDelta: TimeSpan.FromSeconds(5));
             });
 
-            // Long-term retries
+            // Long-term redelivery once fast retries are exhausted (hours to days).
             e.UseDelayedRedelivery(r =>
             {
                 r.Intervals(
@@ -73,14 +80,16 @@ builder.Services.AddMassTransit(x =>
                     TimeSpan.FromDays(7));
             });
 
-            // ✅ EF Core outbox — atomic with the DB transaction
+            // EF Core outbox — atomic with the DB transaction.
             e.UseEntityFrameworkOutbox<AppDbContext>(ctx);
 
-            // ✅ Consumer — always last
+            // Consumer — always configured last, innermost in the pipeline.
             e.ConfigureConsumer<InventoryConsumer>(ctx);
         });
 
-
+        // Registers endpoints for all other consumers/saga too (they're excluded
+        // via ExcludeFromConfigureEndpoints in AddAllConsumers) so the dashboard
+        // still sees the full message topology across services.
         cfg.ConfigureEndpoints(ctx);
     });
 });
