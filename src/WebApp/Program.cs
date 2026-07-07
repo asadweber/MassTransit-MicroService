@@ -1,16 +1,13 @@
 using Application;
-using Application.Dtos;
 using Infrastructure;
-using Infrastructure.Persistence;
 using MassTransit;
-using MassTransit.MongoDbIntegration;
-using MongoDB.Driver;
 using Serilog;
 using Swashbuckle.AspNetCore.Filters;
 using WebApp.Services;
 using WebApp.Swagger;
 
 var builder = WebApplication.CreateBuilder(args);
+
 
 // Serilog config lives entirely in appsettings.json ("Serilog" section).
 builder.Services.AddSerilog(cfg => cfg.ReadFrom.Configuration(builder.Configuration));
