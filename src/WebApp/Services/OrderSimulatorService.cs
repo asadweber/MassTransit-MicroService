@@ -81,13 +81,10 @@ public class OrderSimulatorService(
 
         db.Orders.Add(order);
         await db.SaveChangesAsync(ct);
-
+        await tx.CommitAsync(ct);
         // Publish is written to the outbox table inside the same transaction.
         // The outbox delivery service will forward it to RabbitMQ, even after a restart.
         await bus.Publish(new OrderCreated { Order = mapper.Map<OrderDto>(order) }, ct);
-        await db.SaveChangesAsync(ct);
-
-        await tx.CommitAsync(ct);
 
         logger.LogInformation(
             "Simulated order #{Id} for {Customer} — {Items} item(s), ${Total:F2}",
