@@ -24,7 +24,7 @@ public class InventoryConsumer(ILogger<InventoryConsumer> logger, IOrderService 
             if (item.ProductId == 1)
             {
                 logger.LogWarning("Simulated failure for Order {OrderId}, redelivery count {RedeliveryCount}", msg.OrderId, context.GetRedeliveryCount());
-                throw new Exception("InventoryService is down");
+                throw new HttpRequestException("Inventory service unavailable");
             }
 
             var hasSufficientStock = await productService.HasSufficientStockAsync(item.ProductId, item.OrderQty);
