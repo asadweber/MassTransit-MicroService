@@ -4,8 +4,12 @@ using Infrastructure.Persistence;
 using MassTransit;
 using MongoDB.Driver;
 using OrderSaga.Saga;
+using Serilog;
 
 var builder = Host.CreateApplicationBuilder(args);
+
+// Serilog config lives entirely in appsettings.json ("Serilog" section).
+builder.Services.AddSerilog(cfg => cfg.ReadFrom.Configuration(builder.Configuration));
 
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApplication();

@@ -1,12 +1,15 @@
 using Application;              // AddApplication DI extension
 using Infrastructure;           // AddInfrastructure DI extension
-using Infrastructure.Persistence; // AppDbContext (EF Core, used by outbox)
 using InventoryService;         // InventoryConsumer
 using MassTransit;              // bus, outbox, retry, RabbitMQ transport
+using Serilog;
 
 
 // Worker host — no HTTP surface, just the bus.
 var builder = Host.CreateApplicationBuilder(args);
+
+// Serilog config lives entirely in appsettings.json ("Serilog" section).
+builder.Services.AddSerilog(cfg => cfg.ReadFrom.Configuration(builder.Configuration));
 
 // Registers DbContext + repositories (needed by the EF outbox below).
 builder.Services.AddInfrastructure(builder.Configuration);
