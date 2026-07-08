@@ -7,6 +7,7 @@ namespace OrderSaga.Saga;
 
 public class OrderSagaState :SagaStateMachineInstance,ISagaVersion
 {
+    [BsonId]
     [BsonGuidRepresentation(GuidRepresentation.Standard)]
     public Guid CorrelationId { get; set; }
 
