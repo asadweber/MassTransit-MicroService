@@ -58,7 +58,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
         // First event for a saga instance: correlate by OrderId (no CorrelationId exists yet)
         // and mint a new one. All later events correlate by that generated CorrelationId.
         Event(() => OrderCreated, x =>
-            x.CorrelateBy((state, ctx) => state.OrderId == ctx.Message.Order.Id)
+            x.CorrelateBy((state, ctx) => state.Order == ctx.Message.Order)
              .SelectId(_ => NewId.NextGuid()));
 
         Event(() => InventoryChecked, x =>
@@ -80,14 +80,14 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
             When(OrderCreated)
                 .Then(ctx =>
                 {
-                    ctx.Saga.OrderId = ctx.Message.Order.Id;
+                    ctx.Saga.Order = ctx.Message.Order;
                     Serilog.Context.LogContext.PushProperty("CorrelationId", ctx.Saga.CorrelationId);
-                    Serilog.Context.LogContext.PushProperty("OrderId", ctx.Saga.OrderId);
+                    Serilog.Context.LogContext.PushProperty("OrderId", ctx.Saga.Order.Id);
                 })
                 .PublishAsync(ctx => ctx.Init<CheckInventory>(new CheckInventory
                 {
                     CorrelationId = ctx.Saga.CorrelationId,
-                    OrderId = ctx.Saga.OrderId,
+                    Order = ctx.Saga.Order,
                 }))
                 .TransitionTo(CheckingInventory)
                 .Then(ctx => _logger.LogInformation("OrderCreated -> CheckingInventory")));
@@ -102,12 +102,12 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                     ctx.Saga.FirstUnavailableAt = null;
                     ctx.Saga.InventoryRetryCount = 0;
                     Serilog.Context.LogContext.PushProperty("CorrelationId", ctx.Saga.CorrelationId);
-                    Serilog.Context.LogContext.PushProperty("OrderId", ctx.Saga.OrderId);
+                    Serilog.Context.LogContext.PushProperty("OrderId", ctx.Saga.Order.Id);
                 })
                 .PublishAsync(ctx => ctx.Init<ProcessPayment>(new ProcessPayment
                 {
                     CorrelationId = ctx.Saga.CorrelationId,
-                    OrderId = ctx.Saga.OrderId,
+                    Order = ctx.Saga.Order,
                 }))
                 .TransitionTo(ProcessingPayment)
                 .Then(ctx => _logger.LogInformation("InventoryChecked (available) -> ProcessingPayment")),
@@ -120,7 +120,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                         .TransitionTo(Failed)
                         .Then(ctx => _logger.LogWarning(
                             "Order {OrderId} [{CorrelationId}]: InventoryChecked (unavailable, retry window expired) -> Failed",
-                            ctx.Saga.OrderId, ctx.Saga.CorrelationId)),
+                            ctx.Saga.Order.Id, ctx.Saga.CorrelationId)),
                     retry => retry
                         .Then(ctx =>
                         {
@@ -131,19 +131,19 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                             ctx => ctx.Init<CheckInventory>(new CheckInventory
                             {
                                 CorrelationId = ctx.Saga.CorrelationId,
-                                OrderId = ctx.Saga.OrderId,
+                                Order = ctx.Saga.Order,
                             }),
                             ctx => GetRetryDelay(ctx.Saga.InventoryRetryCount))
                         .Then(ctx => _logger.LogInformation(
                             "Order {OrderId} [{CorrelationId}]: InventoryChecked (unavailable) -> retry #{RetryCount} scheduled",
-                            ctx.Saga.OrderId, ctx.Saga.CorrelationId, ctx.Saga.InventoryRetryCount))),
+                            ctx.Saga.Order.Id, ctx.Saga.CorrelationId, ctx.Saga.InventoryRetryCount))),
 
             // Fires when the scheduled delay elapses (token stored via InventoryRetryTokenId) —
             // re-publish CheckInventory to poll availability again.
             When(InventoryRetry.Received)
                 .Then(ctx => _logger.LogInformation(
                     "Order {OrderId} [{CorrelationId}]: InventoryRetry fired, re-checking inventory",
-                    ctx.Saga.OrderId, ctx.Saga.CorrelationId))
+                    ctx.Saga.Order.Id, ctx.Saga.CorrelationId))
                 .PublishAsync(ctx => ctx.Init<CheckInventory>(ctx.Message)));
 
         // Payment resolves the saga: success confirms and finalizes, failure ends in Failed.
@@ -152,19 +152,19 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                 .PublishAsync(ctx => ctx.Init<OrderConfirmed>(new OrderConfirmed
                 {
                     CorrelationId = ctx.Saga.CorrelationId,
-                    OrderId = ctx.Saga.OrderId,                    
+                    Order = ctx.Saga.Order,
                 }))
                 .TransitionTo(Confirmed)
                 .Then(ctx => _logger.LogInformation(
                     "Order {OrderId} [{CorrelationId}]: PaymentProcessed (success) -> Confirmed",
-                    ctx.Saga.OrderId, ctx.Saga.CorrelationId))
+                    ctx.Saga.Order.Id, ctx.Saga.CorrelationId))
                 .Finalize(),
 
             When(PaymentProcessed, x => !x.Message.IsSuccess)
                 .TransitionTo(Failed)
                 .Then(ctx => _logger.LogWarning(
                     "Order {OrderId} [{CorrelationId}]: PaymentProcessed (declined) -> Failed",
-                    ctx.Saga.OrderId, ctx.Saga.CorrelationId)));
+                    ctx.Saga.Order.Id, ctx.Saga.CorrelationId)));
 
         SetCompletedWhenFinalized();
     }

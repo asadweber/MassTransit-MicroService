@@ -11,7 +11,7 @@ public class NotificationConsumer(ILogger<NotificationConsumer> logger) : IConsu
     {
         var msg = context.Message;
         using var _ = Serilog.Context.LogContext.PushProperty("CorrelationId", msg.CorrelationId);
-        using var __ = Serilog.Context.LogContext.PushProperty("OrderId", msg.OrderId);
+        using var __ = Serilog.Context.LogContext.PushProperty("OrderId", msg.Order.Id);
 
 
 

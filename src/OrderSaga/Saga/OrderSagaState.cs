@@ -1,3 +1,4 @@
+using Application.Dtos;
 using MassTransit;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
@@ -13,7 +14,8 @@ public class OrderSagaState :SagaStateMachineInstance,ISagaVersion
 
     public int Version { get; set; }
 
-    public int OrderId { get; set; }
+    //public int OrderId { get; set; }
+    public OrderDto Order { get; set; }
 
     public DateTime? FirstUnavailableAt { get; set; }
 

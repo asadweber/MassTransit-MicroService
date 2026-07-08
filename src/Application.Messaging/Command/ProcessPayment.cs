@@ -1,8 +1,9 @@
+using Application.Dtos;
+
 namespace Application.Messaging.Command;
 
 public class ProcessPayment
 {
     public Guid CorrelationId { get; set; }
-    public int OrderId { get; set; }
-    public decimal Amount { get; set; }
+    public OrderDto Order { get; set; }
 }

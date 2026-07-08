@@ -15,14 +15,14 @@ public class PaymentConsumer(ILogger<PaymentConsumer> logger, IOrderService orde
     {
         var msg = context.Message;
         using var _ = Serilog.Context.LogContext.PushProperty("CorrelationId", msg.CorrelationId);
-        using var __ = Serilog.Context.LogContext.PushProperty("OrderId", msg.OrderId);
+        using var __ = Serilog.Context.LogContext.PushProperty("OrderId", msg.Order.Id);
 
-        logger.LogInformation("Processing payment, Amount={Amount}", msg.Amount);
+        logger.LogInformation("Processing payment, Amount={Amount}", msg.Order.TotalAmount);
 
         // TODO: real payment processing logic
         var isSuccess = true;
 
-        var order = await orderService.GetByIdAsync(msg.OrderId);
+        var order = await orderService.GetByIdAsync(msg.Order.Id);
 
         //foreach (var item in order.OrderDetails)
         //{
@@ -34,7 +34,7 @@ public class PaymentConsumer(ILogger<PaymentConsumer> logger, IOrderService orde
         await context.Publish(new PaymentProcessed
         {
             CorrelationId = msg.CorrelationId,
-            OrderId = msg.OrderId,
+            Order = msg.Order,
             IsSuccess = isSuccess
         });
     }
