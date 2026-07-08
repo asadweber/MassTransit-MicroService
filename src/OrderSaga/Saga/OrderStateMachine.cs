@@ -47,6 +47,8 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
     // Delayed self-message used to re-poll inventory without blocking the consumer.
     public Schedule<OrderSagaState, CheckInventory> InventoryRetry { get; private set; } = null!;
 
+
+
     private readonly ILogger<OrderStateMachine> _logger;
 
     public OrderStateMachine(ILogger<OrderStateMachine> logger)
@@ -126,6 +128,8 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                         {
                             ctx.Saga.FirstUnavailableAt ??= DateTime.UtcNow;
                             ctx.Saga.InventoryRetryCount++;
+                            ctx.Saga.NextInventoryRetryAt = DateTime.UtcNow + GetRetryDelay(ctx.Saga.InventoryRetryCount);
+
                         })
                         .Schedule(InventoryRetry,
                             ctx => ctx.Init<CheckInventory>(new CheckInventory

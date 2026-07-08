@@ -19,6 +19,7 @@ public class OrderSagaState :SagaStateMachineInstance,ISagaVersion
     public OrderDto Order { get; set; }
 
     public DateTime? FirstUnavailableAt { get; set; }
+    public DateTime? NextInventoryRetryAt { get; set; }
 
     public int InventoryRetryCount { get; set; }
 
