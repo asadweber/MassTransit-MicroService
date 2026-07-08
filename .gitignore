@@ -364,3 +364,6 @@ FodyWeavers.xsd
 
 # Claude Code local settings (machine-specific, not shared)
 .claude/settings.local.json
+
+# libman-restored client-side libraries
+src/SagaDashboard/wwwroot/lib/
