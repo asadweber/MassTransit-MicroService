@@ -1,9 +1,19 @@
 @using Application.Dtos
 @model OrderDto
 
-<h1>Edit Order @Model.Id (Failed Saga)</h1>
+@{
+    var sagaState = (string)ViewBag.SagaState;
+    var targetAction = sagaState == "Failed" ? "Restart" : "UpdateInFlight";
+}
 
-<form asp-action="Restart" asp-route-correlationId="@Context.Request.Query["correlationId"]" method="post">
+<h1>Edit Order @Model.Id (@sagaState Saga)</h1>
+
+@if (sagaState == "CheckingInventory")
+{
+    <p class="text-muted">Saga is retrying inventory checks. Saving updates the order in place — the next scheduled retry will re-check stock against the corrected line items.</p>
+}
+
+<form asp-action="@targetAction" asp-route-correlationId="@Context.Request.Query["correlationId"]" method="post">
     <input type="hidden" asp-for="Id" />
 
     <div class="form-group">
@@ -40,6 +50,6 @@
         </tbody>
     </table>
 
-    <button type="submit" class="btn btn-primary">Save &amp; Restart Saga</button>
+    <button type="submit" class="btn btn-primary">@(sagaState == "Failed" ? "Save & Restart Saga" : "Save & Continue Retrying")</button>
     <a asp-action="Index" class="btn btn-secondary">Cancel</a>
 </form>

@@ -139,12 +139,18 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                             ctx.Saga.Order.Id, ctx.Saga.CorrelationId, ctx.Saga.InventoryRetryCount))),
 
             // Fires when the scheduled delay elapses (token stored via InventoryRetryTokenId) —
-            // re-publish CheckInventory to poll availability again.
+            // re-publish CheckInventory to poll availability again. Reads ctx.Saga.Order (not
+            // ctx.Message) so an admin edit to the order's line items while stuck retrying is
+            // picked up on the next check, instead of re-checking the stale scheduled payload.
             When(InventoryRetry.Received)
                 .Then(ctx => _logger.LogInformation(
                     "Order {OrderId} [{CorrelationId}]: InventoryRetry fired, re-checking inventory",
                     ctx.Saga.Order.Id, ctx.Saga.CorrelationId))
-                .PublishAsync(ctx => ctx.Init<CheckInventory>(ctx.Message)));
+                .PublishAsync(ctx => ctx.Init<CheckInventory>(new CheckInventory
+                {
+                    CorrelationId = ctx.Saga.CorrelationId,
+                    Order = ctx.Saga.Order,
+                })));
 
         // Payment resolves the saga: success confirms and finalizes, failure ends in Failed.
         During(ProcessingPayment,

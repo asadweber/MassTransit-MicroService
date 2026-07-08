@@ -47,6 +47,10 @@
                     {
                         <a asp-action="Edit" asp-route-correlationId="@saga.CorrelationId" class="btn btn-sm btn-warning">Edit &amp; Restart</a>
                     }
+                    else if (saga.CurrentState == "CheckingInventory")
+                    {
+                        <a asp-action="Edit" asp-route-correlationId="@saga.CorrelationId" class="btn btn-sm btn-info">Edit Items</a>
+                    }
                 </td>
             </tr>
         }
