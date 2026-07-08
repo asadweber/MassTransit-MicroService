@@ -12,6 +12,7 @@ dotnet run --project src/InventoryService  # worker
 dotnet run --project src/PaymentService    # worker
 dotnet run --project src/NotificationService # worker
 dotnet run --project src/RabbitMqCleanupTool -- --yes   # deletes this solution's queues/exchanges (dry-run without --yes)
+dotnet run --project src/SagaDashboard     # monitoring-only host + MassTransit dashboard across all services
 ```
 
 No test project exists in the solution currently.
@@ -38,6 +39,7 @@ This is an order-processing system built as a MassTransit saga across several .N
 - `PaymentService` — worker; `PaymentConsumer` handles `ProcessPayment` → publishes `PaymentProcessed` (payment logic is currently a stub, always succeeds).
 - `NotificationService` — worker; `NotificationConsumer` handles `OrderConfirmed` (stubbed, logs only).
 - `RabbitMqCleanupTool` — standalone console utility (not a bus host) using the RabbitMQ Management HTTP API to dry-run/delete this solution's queues and exchanges by name pattern.
+- `SagaDashboard` — monitoring-only ASP.NET Core host. References every other service's consumer classes plus `OrderStateMachine`/`OrderSagaState` purely to register them with MassTransit for dashboard visibility (`AddConsumer<T>`, `AddSagaStateMachine<...>().MongoDbRepository(...)`, then `cfg.ConfigureEndpoints(ctx)`) — it never configures a manual `ReceiveEndpoint`, so it binds no queues and never actually consumes or duplicates message handling. Mounts `UseMassTransitDashboard()` at `/` to show queue/consumer/saga flow across all 5 services in one place.
 
 **Saga flow** (`src/OrderSaga/Saga/OrderStateMachine.cs`):
 `OrderCreated → CheckingInventory → ProcessingPayment → Confirmed`, with `Failed` as a terminal dead-end. Two distinct retry mechanisms exist and are not interchangeable:

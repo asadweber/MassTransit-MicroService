@@ -40,13 +40,6 @@ builder.Services.AddMassTransit(x =>
     });
 });
 
-
-builder.Services.AddMassTransitDashboard(options =>
-{
-    options.Metrics.Enabled = true;
-    options.Flow.Enabled = true;
-});
-
 builder.Services.AddHostedService<OrderSimulatorService>();
 
 builder.Services.AddControllers();
@@ -69,8 +62,5 @@ app.UseHttpsRedirection();
 app.UseAuthorization();
 
 app.MapControllers();
-
-//masstransit
-app.UseMassTransitDashboard();
 
 app.Run();
