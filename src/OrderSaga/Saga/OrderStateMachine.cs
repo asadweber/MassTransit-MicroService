@@ -152,7 +152,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                 .PublishAsync(ctx => ctx.Init<OrderConfirmed>(new OrderConfirmed
                 {
                     CorrelationId = ctx.Saga.CorrelationId,
-                    OrderId = ctx.Saga.OrderId,
+                    OrderId = ctx.Saga.OrderId,                    
                 }))
                 .TransitionTo(Confirmed)
                 .Then(ctx => _logger.LogInformation(
