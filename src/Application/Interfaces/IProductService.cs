@@ -7,4 +7,6 @@ public interface IProductService
     Task<bool> HasSufficientStockAsync(int productId, int qty);
 
     Task<bool> ReduceStockQtyAsync(int productId, int qty);
+
+    Task<List<ProductDto>> GetAllAsync();
 }

@@ -35,4 +35,10 @@ public class ProductService(IUnitOfWork uow, IPublishEndpoint bus, IMapper mappe
         await uow.CommitAsync();
         return true;
     }
+
+    public async Task<List<ProductDto>> GetAllAsync()
+    {
+        var products = await uow.Products.GetAllAsync();
+        return mapper.Map<List<ProductDto>>(products);
+    }
 }

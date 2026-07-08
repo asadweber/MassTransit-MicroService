@@ -29,6 +29,7 @@
             <th>Total Amount</th>
             <th>Saga State</th>
             <th>Correlation Id</th>
+            <th>Actions</th>
         </tr>
     </thead>
     <tbody>
@@ -41,12 +42,18 @@
                 <td>@saga.Order?.TotalAmount</td>
                 <td>@saga.CurrentState</td>
                 <td>@saga.CorrelationId</td>
+                <td>
+                    @if (saga.CurrentState == "Failed")
+                    {
+                        <a asp-action="Edit" asp-route-correlationId="@saga.CorrelationId" class="btn btn-sm btn-warning">Edit &amp; Restart</a>
+                    }
+                </td>
             </tr>
         }
         @if (!Model.Any())
         {
             <tr>
-                <td colspan="6" class="text-center">No sagas found.</td>
+                <td colspan="7" class="text-center">No sagas found.</td>
             </tr>
         }
     </tbody>
