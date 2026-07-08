@@ -60,7 +60,19 @@ builder.Services.AddMassTransitDashboard(options =>
     options.Flow.Enabled = true;
 });
 
+builder.Services.AddControllersWithViews();
+
 var app = builder.Build();
+
+app.UseStaticFiles();
+
+app.UseRouting();
+
+app.UseAuthorization();
+
+app.MapControllerRoute(
+    name: "default",
+    pattern: "mvc/{controller=Home}/{action=Index}/{id?}");
 
 app.UseMassTransitDashboard();
 
