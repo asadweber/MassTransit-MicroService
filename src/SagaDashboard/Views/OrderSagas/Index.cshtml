@@ -28,6 +28,7 @@
             <th>Order Date</th>
             <th>Total Amount</th>
             <th>Saga State</th>
+            <th>Retry Count</th>
             <th>Correlation Id</th>
             <th>Actions</th>
         </tr>
@@ -41,6 +42,7 @@
                 <td>@saga.Order?.OrderDate</td>
                 <td>@saga.Order?.TotalAmount</td>
                 <td>@saga.CurrentState</td>
+                <td>@saga.InventoryRetryCount</td>
                 <td>@saga.CorrelationId</td>
                 <td>
                     @if (saga.CurrentState == "Failed")
