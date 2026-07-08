@@ -16,9 +16,9 @@ public class InventoryConsumer(ILogger<InventoryConsumer> logger, IOrderService 
 
         logger.LogInformation("Checking inventory");
 
-        var order = await orderService.GetByIdAsync(msg.Order.Id);
+        //var order = await orderService.GetByIdAsync(msg.Order.Id);
         var isAvailable = true;
-        foreach (var item in order.OrderDetails)
+        foreach (var item in msg.Order.OrderDetails)
         {
             //if (item.ProductId == 1)
             //{
@@ -29,16 +29,16 @@ public class InventoryConsumer(ILogger<InventoryConsumer> logger, IOrderService 
             var hasSufficientStock = await productService.HasSufficientStockAsync(item.ProductId, item.OrderQty);
             if (!hasSufficientStock)
             {
-                order.Status = "Stock Not Available";
-                await orderService.UpdateAsync(msg.Order.Id, order);
+                msg.Order.Status = "Stock Not Available";
+                await orderService.UpdateAsync(msg.Order.Id, msg.Order);
                 isAvailable = false;
                 break;
             }
         }
         if (isAvailable)
         {
-            order.Status = "Stock Available";
-            await orderService.UpdateAsync(msg.Order.Id, order);
+            msg.Order.Status = "Stock Available";
+            await orderService.UpdateAsync(msg.Order.Id, msg.Order);
         }
 
         logger.LogInformation("Inventory check result -> IsAvailable={IsAvailable}", isAvailable);
