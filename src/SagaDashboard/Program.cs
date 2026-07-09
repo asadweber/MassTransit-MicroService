@@ -36,7 +36,6 @@ builder.Services.AddMassTransit(x =>
     x.AddBusMetadataExplorer();
 
     x.AddConsumer<InventoryConsumer>();
-    x.AddConsumer<ForceRetryCheckInventoryConsumer>();
     x.AddConsumer<PaymentConsumer>();
     x.AddConsumer<NotificationConsumer>();
 
