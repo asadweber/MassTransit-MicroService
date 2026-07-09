@@ -33,19 +33,19 @@ builder.Services.AddSingleton(sp =>
 // so this project never actually consumes/duplicates message handling.
 builder.Services.AddMassTransit(x =>
 {
-    x.AddBusMetadataExplorer();
+    //x.AddBusMetadataExplorer();
 
-    x.AddConsumer<InventoryConsumer>();
-    x.AddConsumer<PaymentConsumer>();
-    x.AddConsumer<NotificationConsumer>();
+    //x.AddConsumer<InventoryConsumer>();
+    //x.AddConsumer<PaymentConsumer>();
+    //x.AddConsumer<NotificationConsumer>();
 
-    x.AddSagaStateMachine<OrderStateMachine, OrderSagaState, DashboardOnlySagaDefinition>()
-        .MongoDbRepository(r =>
-        {
-            r.Connection = mongoSection!.ConnectionString;
-            r.DatabaseName = mongoSection.DatabaseName;
-            r.CollectionName = mongoSection.SagaCollection;
-        });
+    //x.AddSagaStateMachine<OrderStateMachine, OrderSagaState, DashboardOnlySagaDefinition>()
+    //    .MongoDbRepository(r =>
+    //    {
+    //        r.Connection = mongoSection!.ConnectionString;
+    //        r.DatabaseName = mongoSection.DatabaseName;
+    //        r.CollectionName = mongoSection.SagaCollection;
+    //    });
 
     x.UsingRabbitMq((ctx, cfg) =>
     {
@@ -64,11 +64,11 @@ builder.Services.AddMassTransit(x =>
     });
 });
 
-builder.Services.AddMassTransitDashboard(options =>
-{
-    options.Metrics.Enabled = true;
-    options.Flow.Enabled = true;
-});
+//builder.Services.AddMassTransitDashboard(options =>
+//{
+//    options.Metrics.Enabled = true;
+//    options.Flow.Enabled = true;
+//});
 
 builder.Services.AddControllersWithViews();
 
@@ -84,6 +84,6 @@ app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
-app.UseMassTransitDashboard();
+//app.UseMassTransitDashboard();
 
 app.Run();
