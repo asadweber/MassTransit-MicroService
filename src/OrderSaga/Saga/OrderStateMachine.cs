@@ -143,8 +143,8 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                                 // Computed once and reused below so the persisted
                                 // NextInventoryRetryAt always matches the actual
                                 // scheduled fire time, even if the delay formula changes.
-                                var delay = GetRetryDelay(ctx.Saga.InventoryRetryCount);
-                                ctx.Saga.NextInventoryRetryAt = DateTime.UtcNow + delay;
+                                //var delay = GetRetryDelay(ctx.Saga.InventoryRetryCount);
+                                ctx.Saga.NextInventoryRetryAt = DateTime.UtcNow + TimeSpan.FromSeconds(30);
                             })
                             .Unschedule(InventoryRetry)
                             .Schedule(
