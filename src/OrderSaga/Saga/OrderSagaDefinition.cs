@@ -26,28 +26,28 @@ namespace OrderSaga.Saga
                 rabbitMqEndpointConfigurator.Durable = true;
                 rabbitMqEndpointConfigurator.AutoDelete = false;
             }
-            //endpointConfigurator.UseMessageRetry(r =>
-            //{
-            //    r.Exponential(
-            //        retryLimit: 5,
-            //        minInterval: TimeSpan.FromSeconds(1),
-            //        maxInterval: TimeSpan.FromMinutes(1),
-            //        intervalDelta: TimeSpan.FromSeconds(5));
-            //});
+            endpointConfigurator.UseMessageRetry(r =>
+            {
+                r.Exponential(
+                    retryLimit: 5,
+                    minInterval: TimeSpan.FromSeconds(1),
+                    maxInterval: TimeSpan.FromMinutes(1),
+                    intervalDelta: TimeSpan.FromSeconds(5));
+            });
 
-            //endpointConfigurator.UseDelayedRedelivery(r =>
-            //{
-            //    r.Intervals(
-            //        TimeSpan.FromMinutes(5),
-            //        TimeSpan.FromMinutes(10),
-            //        TimeSpan.FromMinutes(30),
-            //        TimeSpan.FromHours(1),
-            //        TimeSpan.FromHours(6),
-            //        TimeSpan.FromHours(12),
-            //        TimeSpan.FromDays(1),
-            //        TimeSpan.FromDays(3),
-            //        TimeSpan.FromDays(7));
-            //});
+            endpointConfigurator.UseDelayedRedelivery(r =>
+            {
+                r.Intervals(
+                    TimeSpan.FromMinutes(5),
+                    TimeSpan.FromMinutes(10),
+                    TimeSpan.FromMinutes(30),
+                    TimeSpan.FromHours(1),
+                    TimeSpan.FromHours(6),
+                    TimeSpan.FromHours(12),
+                    TimeSpan.FromDays(1),
+                    TimeSpan.FromDays(3),
+                    TimeSpan.FromDays(7));
+            });
 
             // Ensures messages for the same saga (CorrelationId) are processed in order,
             // even though ConcurrentMessageLimit allows multiple sagas in parallel.
