@@ -114,33 +114,50 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                 .TransitionTo(ProcessingPayment)
                 .Then(ctx => _logger.LogInformation("InventoryChecked (available) -> ProcessingPayment")),
 
-            // Still unavailable: give up only once MaxRetryWindow (7d from first-seen-unavailable)
-            // has elapsed; otherwise schedule another check with growing backoff.
-            When(InventoryChecked, x => !x.Message.IsAvailable)
-                .IfElse(ctx => IsRetryWindowExpired(ctx.Saga),
-                    stillUnavailable => stillUnavailable
-                        .TransitionTo(Failed)
-                        .Then(ctx => _logger.LogWarning(
-                            "Order {OrderId} [{CorrelationId}]: InventoryChecked (unavailable, retry window expired) -> Failed",
-                            ctx.Saga.Order.Id, ctx.Saga.CorrelationId)),
-                    retry => retry
-                        .Then(ctx =>
-                        {
-                            ctx.Saga.FirstUnavailableAt ??= DateTime.UtcNow;
-                            ctx.Saga.InventoryRetryCount++;
-                            ctx.Saga.NextInventoryRetryAt = DateTime.UtcNow + GetRetryDelay(ctx.Saga.InventoryRetryCount);
+           // Still unavailable: give up only once MaxRetryWindow (7d from first-seen-unavailable)
+           // has elapsed; otherwise schedule another check with growing backoff.
+           When(InventoryChecked, x => !x.Message.IsAvailable)
+                    .Then(ctx =>
+                    {
+                        // Record the first time inventory became unavailable.
+                        ctx.Saga.FirstUnavailableAt ??= DateTime.UtcNow;
+                    })
+                    .IfElse(ctx => IsRetryWindowExpired(ctx.Saga),
 
-                        })
-                        .Schedule(InventoryRetry,
-                            ctx => ctx.Init<CheckInventory>(new CheckInventory
+                        // Retry window has expired.
+                        expired => expired
+                            .Unschedule(InventoryRetry)
+                            .TransitionTo(Failed)
+                            .Then(ctx => _logger.LogWarning(
+                                "Order {OrderId} [{CorrelationId}]: Inventory unavailable for {RetryWindow}. Transitioning to Failed.",
+                                ctx.Saga.Order.Id,
+                                ctx.Saga.CorrelationId,
+                                MaxRetryWindow)),
+
+                        // Schedule another inventory check.
+                        retry => retry
+                            .Then(ctx =>
                             {
-                                CorrelationId = ctx.Saga.CorrelationId,
-                                Order = ctx.Saga.Order,
-                            }),
-                            ctx => GetRetryDelay(ctx.Saga.InventoryRetryCount))
-                        .Then(ctx => _logger.LogInformation(
-                            "Order {OrderId} [{CorrelationId}]: InventoryChecked (unavailable) -> retry #{RetryCount} scheduled",
-                            ctx.Saga.Order.Id, ctx.Saga.CorrelationId, ctx.Saga.InventoryRetryCount))),
+                                ctx.Saga.InventoryRetryCount++;
+
+                                var delay = GetRetryDelay(ctx.Saga.InventoryRetryCount);
+                                ctx.Saga.NextInventoryRetryAt = DateTime.UtcNow + delay;
+                            })
+                            .Unschedule(InventoryRetry)
+                            .Schedule(
+                                InventoryRetry,
+                                ctx => ctx.Init<CheckInventory>(new CheckInventory
+                                {
+                                    CorrelationId = ctx.Saga.CorrelationId,
+                                    Order = ctx.Saga.Order,
+                                }),
+                                ctx => GetRetryDelay(ctx.Saga.InventoryRetryCount))
+                            .Then(ctx => _logger.LogInformation(
+                                "Order {OrderId} [{CorrelationId}]: Inventory unavailable. Retry #{RetryCount} scheduled for {NextRetry}.",
+                                ctx.Saga.Order.Id,
+                                ctx.Saga.CorrelationId,
+                                ctx.Saga.InventoryRetryCount,
+                                ctx.Saga.NextInventoryRetryAt))),
 
             // Fires when the scheduled delay elapses (token stored via InventoryRetryTokenId) —
             // re-publish CheckInventory to poll availability again. Reads ctx.Saga.Order (not
@@ -191,7 +208,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
 
     private static bool IsRetryWindowExpired(OrderSagaState saga)
     {
-        var firstUnavailableAt = saga.FirstUnavailableAt ?? DateTime.UtcNow;
-        return DateTime.UtcNow - firstUnavailableAt >= MaxRetryWindow;
+        return saga.FirstUnavailableAt.HasValue &&
+               DateTime.UtcNow - saga.FirstUnavailableAt.Value >= MaxRetryWindow;
     }
 }
