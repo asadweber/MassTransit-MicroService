@@ -140,6 +140,9 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                             {
                                 ctx.Saga.InventoryRetryCount++;
 
+                                // Computed once and reused below so the persisted
+                                // NextInventoryRetryAt always matches the actual
+                                // scheduled fire time, even if the delay formula changes.
                                 var delay = GetRetryDelay(ctx.Saga.InventoryRetryCount);
                                 ctx.Saga.NextInventoryRetryAt = DateTime.UtcNow + delay;
                             })
@@ -151,7 +154,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                                     CorrelationId = ctx.Saga.CorrelationId,
                                     Order = ctx.Saga.Order,
                                 }),
-                                ctx => GetRetryDelay(ctx.Saga.InventoryRetryCount))
+                                ctx => ctx.Saga.NextInventoryRetryAt!.Value - DateTime.UtcNow)
                             .Then(ctx => _logger.LogInformation(
                                 "Order {OrderId} [{CorrelationId}]: Inventory unavailable. Retry #{RetryCount} scheduled for {NextRetry}.",
                                 ctx.Saga.Order.Id,
@@ -160,9 +163,10 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                                 ctx.Saga.NextInventoryRetryAt))),
 
             // Fires when the scheduled delay elapses (token stored via InventoryRetryTokenId) —
-            // re-publish CheckInventory to poll availability again. Reads ctx.Saga.Order (not
-            // ctx.Message) so an admin edit to the order's line items while stuck retrying is
-            // picked up on the next check, instead of re-checking the stale scheduled payload.
+            // re-publish as CheckInventory
+            // can tell a saga-driven retry apart from the initial check. Reads ctx.Saga.Order
+            // (not ctx.Message) so an admin edit to the order's line items while stuck retrying
+            // is picked up on the next check, instead of re-checking the stale scheduled payload.
             When(InventoryRetry.Received)
                 .Then(ctx => _logger.LogInformation(
                     "Order {OrderId} [{CorrelationId}]: InventoryRetry fired, re-checking inventory",

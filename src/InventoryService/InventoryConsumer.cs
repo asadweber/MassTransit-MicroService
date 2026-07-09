@@ -29,15 +29,17 @@ public class InventoryConsumer(ILogger<InventoryConsumer> logger, IOrderService 
             var hasSufficientStock = await productService.HasSufficientStockAsync(item.ProductId, item.OrderQty);
             if (!hasSufficientStock)
             {
-                msg.Order.Status = "Stock Not Available";
-                await orderService.UpdateAsync(msg.Order.Id, msg.Order);
                 isAvailable = false;
                 break;
             }
         }
-        if (isAvailable)
+
+        // Skip the write on repeat retries when status hasn't actually changed —
+        // avoids a redundant UpdateAsync every backoff attempt over the 7-day window.
+        var newStatus = isAvailable ? "Stock Available" : "Stock Not Available";
+        if (msg.Order.Status != newStatus)
         {
-            msg.Order.Status = "Stock Available";
+            msg.Order.Status = newStatus;
             await orderService.UpdateAsync(msg.Order.Id, msg.Order);
         }
 
