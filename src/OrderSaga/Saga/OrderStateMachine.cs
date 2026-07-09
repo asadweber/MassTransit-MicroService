@@ -201,9 +201,26 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
     /// </summary>
     private static TimeSpan GetRetryDelay(int retryCount)
     {
-        var delayMinutes = FirstRetryDelay.TotalMinutes * Math.Pow(BackoffFactor, retryCount - 1);
-        var delay = TimeSpan.FromMinutes(delayMinutes);
-        return delay > MaxRetryDelay ? MaxRetryDelay : delay;
+        if (retryCount <= 1)
+            return FirstRetryDelay;
+
+        var delay = FirstRetryDelay;
+
+        for (var i = 1; i < retryCount; i++)
+        {
+            if (delay >= MaxRetryDelay)
+                return MaxRetryDelay;
+
+            var nextTicks = delay.Ticks * BackoffFactor;
+
+            // Prevent overflow
+            if (nextTicks >= MaxRetryDelay.Ticks)
+                return MaxRetryDelay;
+
+            delay = TimeSpan.FromTicks(nextTicks);
+        }
+
+        return delay;
     }
 
     private static bool IsRetryWindowExpired(OrderSagaState saga)
