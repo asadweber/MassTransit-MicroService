@@ -120,7 +120,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                     .Then(ctx =>
                     {
                         // Record the first time inventory became unavailable.
-                        ctx.Saga.FirstUnavailableAt ??= DateTime.UtcNow;
+                        ctx.Saga.FirstUnavailableAt ??= DateTime.UtcNow;                        
                     })
                     .IfElse(ctx => IsRetryWindowExpired(ctx.Saga),
 

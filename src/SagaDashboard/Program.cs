@@ -6,6 +6,7 @@ using MongoDB.Driver;
 using NotificationService;
 using OrderSaga.Saga;
 using PaymentService;
+using SagaDashboard;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -38,7 +39,7 @@ builder.Services.AddMassTransit(x =>
     x.AddConsumer<PaymentConsumer>();
     x.AddConsumer<NotificationConsumer>();
 
-    x.AddSagaStateMachine<OrderStateMachine, OrderSagaState, OrderSagaDefinition>()
+    x.AddSagaStateMachine<OrderStateMachine, OrderSagaState, DashboardOnlySagaDefinition>()
         .MongoDbRepository(r =>
         {
             r.Connection = mongoSection!.ConnectionString;

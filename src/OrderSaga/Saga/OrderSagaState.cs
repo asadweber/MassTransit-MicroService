@@ -21,7 +21,7 @@ public class OrderSagaState :SagaStateMachineInstance,ISagaVersion
     public DateTime? FirstUnavailableAt { get; set; }
     public DateTime? NextInventoryRetryAt { get; set; }
 
-    public int InventoryRetryCount { get; set; }
+    public int InventoryRetryCount { get; set; } = 0;
 
     [BsonGuidRepresentation(GuidRepresentation.Standard)]
     public Guid? InventoryRetryTokenId { get; set; }
