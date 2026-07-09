@@ -82,8 +82,8 @@ builder.Services.AddMassTransit(x =>
             // AdjustStock) that can mutate the same inventory row, add a partitioner
             // for each of those types too — otherwise those messages get zero
             // serialization protection against concurrent mutation of the same item.
-            var partitioner = e.CreatePartitioner(8);
-            e.UsePartitioner<CheckInventory>(partitioner, m => m.Message.CorrelationId);
+            //var partitioner = e.CreatePartitioner(8);
+            //e.UsePartitioner<CheckInventory>(partitioner, m => m.Message.CorrelationId);
 
             // Consumer — always configured last, innermost in the pipeline.
             e.ConfigureConsumer<InventoryConsumer>(ctx);

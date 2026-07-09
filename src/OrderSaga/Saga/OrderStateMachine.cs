@@ -203,7 +203,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
     /// <summary>
     /// Exponential backoff (x5 per attempt: 1m, 5m, 25m, 125m, ...), capped at <see cref="MaxRetryDelay"/> per step.
     /// </summary>
-    private static TimeSpan GetRetryDelay(int retryCount)
+    private  TimeSpan GetRetryDelay(int retryCount)
     {
         if (retryCount <= 1)
             return FirstRetryDelay;
@@ -227,7 +227,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
         return delay;
     }
 
-    private static bool IsRetryWindowExpired(OrderSagaState saga)
+    private  bool IsRetryWindowExpired(OrderSagaState saga)
     {
         return saga.FirstUnavailableAt.HasValue &&
                DateTime.UtcNow - saga.FirstUnavailableAt.Value >= MaxRetryWindow;
