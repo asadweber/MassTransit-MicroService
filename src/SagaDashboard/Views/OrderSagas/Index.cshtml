@@ -44,7 +44,11 @@
                 <td>@saga.Order?.TotalAmount</td>
                 <td>@saga.CurrentState</td>
                 <td>@saga.InventoryRetryCount</td>
-                <td>@saga.NextInventoryRetryAt</td>
+                <td>
+                    @(saga.NextInventoryRetryAt.HasValue
+            ? DateTime.SpecifyKind(saga.NextInventoryRetryAt.Value, DateTimeKind.Utc).ToLocalTime().ToString("yyyy-MM-dd hh:mm:ss tt")
+            : "-")
+                </td>
                 <td>@saga.CorrelationId</td>
                 <td>
                     @if (saga.CurrentState == "Failed")
