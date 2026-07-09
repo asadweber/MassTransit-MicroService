@@ -84,11 +84,9 @@ builder.Services.AddMassTransit(x =>
             // serialization protection against concurrent mutation of the same item.
             var partitioner = e.CreatePartitioner(8);
             e.UsePartitioner<CheckInventory>(partitioner, m => m.Message.CorrelationId);
-            e.UsePartitioner<ForceRetryCheckInventory>(partitioner, m => m.Message.CorrelationId);
 
             // Consumer — always configured last, innermost in the pipeline.
             e.ConfigureConsumer<InventoryConsumer>(ctx);
-            e.ConfigureConsumer<ForceRetryCheckInventoryConsumer>(ctx);
         });
 
         // Registers endpoints for all other consumers/saga too (they're excluded
