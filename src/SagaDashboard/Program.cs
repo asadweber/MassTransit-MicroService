@@ -65,11 +65,11 @@ builder.Services.AddMassTransit(x =>
     });
 });
 
-builder.Services.AddMassTransitDashboard(options =>
-{
-    options.Metrics.Enabled = true;
-    options.Flow.Enabled = true;
-});
+//builder.Services.AddMassTransitDashboard(options =>
+//{
+//    options.Metrics.Enabled = true;
+//    options.Flow.Enabled = true;
+//});
 
 builder.Services.AddControllersWithViews();
 
