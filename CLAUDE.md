@@ -66,5 +66,5 @@ Orders are created two ways, both going through the same pattern (`OrderService.
 
 - `PaymentConsumer` (`src/PaymentService/PaymentConsumer.cs`): payment logic is `var isSuccess = true;` — no real processing.
 - `NotificationConsumer` (`src/NotificationService/NotificationConsumer.cs`): logs only, no email/push.
-- `OrderStateMachine`'s `OrderConfirmed` publish (`src/OrderSaga/Saga/OrderStateMachine.cs:152`) only sets `CorrelationId`/`OrderId` — the event's `CustomerName`/`TotalAmount` fields are left default, even though `NotificationConsumer` logs them.
-- `InventoryConsumer` has a hardcoded simulated failure for `ProductId == 1` (throws `HttpRequestException` to exercise the retry/redelivery path) — remove/gate this before relying on inventory checks for a real product with id 1.
+- `OrderStateMachine`'s `OrderConfirmed` publish (`src/OrderSaga/Saga/OrderStateMachine.cs:183`) only sets `CorrelationId`/`OrderId` — the event's `CustomerName`/`TotalAmount` fields are left default, even though `NotificationConsumer` logs them.
+- `InventoryConsumer` (`src/InventoryService/InventoryConsumer.cs`) has a commented-out simulated failure for `ProductId == 1` (`throw new HttpRequestException(...)`, used to exercise the retry/redelivery path) — currently inert, so re-enable deliberately if testing redelivery again.
