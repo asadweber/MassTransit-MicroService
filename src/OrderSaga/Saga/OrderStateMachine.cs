@@ -23,26 +23,36 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
     // Multiplier applied per retry attempt (1m, 5m, 25m, 125m, ...).
     private const int BackoffFactor = 5;
 
+    #region Saga State
     // Waiting on InventoryChecked after publishing CheckInventory.
     public State CheckingInventory { get; private set; } = null!;
-    
+
     // Waiting on PaymentProcessed after publishing ProcessPayment.
     public State ProcessingPayment { get; private set; } = null!;
-    
+
     // Terminal success state; saga finalizes here.
     public State Confirmed { get; private set; } = null!;
-    
+
     // Terminal failure state (inventory exhausted retries, or payment declined).
     public State Failed { get; private set; } = null!;
 
+    #endregion
+
+
+    #region Saga Events
+
     // Starts a new saga instance.
     public Event<OrderCreated> OrderCreated { get; private set; } = null!;
-    
+
     // Reply from InventoryService indicating stock availability.
     public Event<InventoryChecked> InventoryChecked { get; private set; } = null!;
-    
+
     // Reply from PaymentService indicating charge outcome.
     public Event<PaymentProcessed> PaymentProcessed { get; private set; } = null!;
+
+    #endregion
+
+
 
     // Delayed self-message used to re-poll inventory without blocking the consumer.
     public Schedule<OrderSagaState, CheckInventory> InventoryRetry { get; private set; } = null!;
@@ -60,7 +70,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
         // First event for a saga instance: correlate by OrderId (no CorrelationId exists yet)
         // and mint a new one. All later events correlate by that generated CorrelationId.
         Event(() => OrderCreated, x =>
-            x.CorrelateBy((state, ctx) => state.Order == ctx.Message.Order)
+            x.CorrelateBy((instance, context) => instance.Order == context.Message.Order)
              .SelectId(_ => NewId.NextGuid()));
 
         Event(() => InventoryChecked, x =>
