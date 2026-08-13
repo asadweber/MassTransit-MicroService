@@ -46,19 +46,30 @@ namespace OrderSaga.Saga
                 r.Interval(5, TimeSpan.FromMilliseconds(50));
             });
 
-            //endpointConfigurator.UseDelayedRedelivery(r =>
-            //{
-            //    r.Intervals(
-            //        TimeSpan.FromMinutes(5),
-            //        TimeSpan.FromMinutes(10),
-            //        TimeSpan.FromMinutes(30),
-            //        TimeSpan.FromHours(1),
-            //        TimeSpan.FromHours(6),
-            //        TimeSpan.FromHours(12),
-            //        TimeSpan.FromDays(1),
-            //        TimeSpan.FromDays(3),
-            //        TimeSpan.FromDays(7));
-            //});
+            // Trips after sustained failure (15% of a rolling 1-min window, min 10 attempts
+            // evaluated) so a struggling downstream dependency doesn't get hammered further —
+            // rejects fast instead of queuing more retries. Half-open probe after 5 min.
+            endpointConfigurator.UseCircuitBreaker(cb =>
+            {
+                cb.TrackingPeriod = TimeSpan.FromMinutes(1);
+                cb.TripThreshold = 15;
+                cb.ActiveThreshold = 10;
+                cb.ResetInterval = TimeSpan.FromMinutes(5);
+            });
+
+            endpointConfigurator.UseDelayedRedelivery(r =>
+            {
+                r.Intervals(
+                    TimeSpan.FromMinutes(5),
+                    TimeSpan.FromMinutes(10),
+                    TimeSpan.FromMinutes(30),
+                    TimeSpan.FromHours(1),
+                    TimeSpan.FromHours(6),
+                    TimeSpan.FromHours(12),
+                    TimeSpan.FromDays(1),
+                    TimeSpan.FromDays(3),
+                    TimeSpan.FromDays(7));
+            });
 
             // Ensures messages for the same saga (CorrelationId) are processed in order,
             // even though ConcurrentMessageLimit allows multiple sagas in parallel.
