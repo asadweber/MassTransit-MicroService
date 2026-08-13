@@ -78,7 +78,7 @@ namespace OrderSaga.Saga
 
             // Ensures messages for the same saga (CorrelationId) are processed in order,
             // even though ConcurrentMessageLimit allows multiple sagas in parallel.
-            //sagaConfigurator.UsePartitioner(endpointConfigurator.ConcurrentMessageLimit ?? 16, x => x.Saga.CorrelationId);
+            sagaConfigurator.UsePartitioner(endpointConfigurator.ConcurrentMessageLimit ?? 16, x => x.Saga.CorrelationId);
             
             // Same partitioner for all Order saga messages
             var partitioner =
