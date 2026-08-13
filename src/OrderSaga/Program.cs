@@ -48,6 +48,8 @@ builder.Services.AddMassTransit(x =>
         // RabbitMQ delayed-exchange plugin (rabbitmq_delayed_message_exchange).
         cfg.UseDelayedMessageScheduler();
 
+        // Caps saga consumer throughput at 100 messages/sec across its auto-generated endpoint.
+        cfg.UseRateLimit(400, TimeSpan.FromSeconds(1));
 
         cfg.ConfigureEndpoints(ctx);
     });

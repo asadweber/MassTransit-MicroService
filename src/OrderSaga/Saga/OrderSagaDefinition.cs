@@ -15,10 +15,10 @@ namespace OrderSaga.Saga
         {
 
             // Broker-level buffer: how many unacked messages RabbitMQ will push at once
-            endpointConfigurator.PrefetchCount = 32;
+            endpointConfigurator.PrefetchCount = 128;
 
             // In-process concurrency: how many messages MassTransit processes simultaneously
-            endpointConfigurator.ConcurrentMessageLimit = 8;
+            endpointConfigurator.ConcurrentMessageLimit = 64;
 
             
             if (endpointConfigurator is IRabbitMqReceiveEndpointConfigurator rabbitMqEndpointConfigurator)

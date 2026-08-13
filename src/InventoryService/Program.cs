@@ -48,8 +48,11 @@ builder.Services.AddMassTransit(x =>
         {
             e.Durable = true;               // queue survives broker restart
             e.AutoDelete = false;           // keep queue when no consumers connected
-            e.PrefetchCount = 32;           // messages fetched per consumer before ack
-            e.ConcurrentMessageLimit = 8;  // max messages processed in parallel
+            e.PrefetchCount = 128;           // messages fetched per consumer before ack
+            e.ConcurrentMessageLimit = 64;  // max messages processed in parallel
+
+            // Caps consumer throughput at 100 messages/sec for this endpoint.
+            e.UseRateLimit(400, TimeSpan.FromSeconds(1));
 
             // Fast retries for transient failures (5 attempts, 1s-1m exponential backoff).
             e.UseMessageRetry(r =>
