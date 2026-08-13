@@ -49,6 +49,12 @@ builder.Services.AddMassTransit(x =>
             // Caps consumer throughput at 100 messages/sec for this endpoint.
             e.UseRateLimit(400, TimeSpan.FromSeconds(1));
 
+            e.UseMessageRetry(r =>
+            {
+                r.Handle<MongoDbConcurrencyException>();
+                r.Interval(10, TimeSpan.FromMilliseconds(100));
+            });
+
             // Fast retries for transient failures (5 attempts, 1s-1m exponential backoff).
             e.UseMessageRetry(r =>
             {
