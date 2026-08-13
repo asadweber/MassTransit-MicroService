@@ -1,5 +1,6 @@
 ﻿using Infrastructure.Persistence;
 using MassTransit;
+using MassTransit.MongoDbIntegration.Saga;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -26,6 +27,15 @@ namespace OrderSaga.Saga
                 rabbitMqEndpointConfigurator.Durable = true;
                 rabbitMqEndpointConfigurator.AutoDelete = false;
             }
+            // Mongo optimistic-concurrency conflicts (two messages racing to update the same
+            // saga doc) are expected under load and resolve almost instantly — retry fast
+            // instead of waiting on the slower fault-retry policy below.
+            endpointConfigurator.UseMessageRetry(r =>
+            {
+                r.Handle<MongoDbConcurrencyException>();
+                r.Interval(5, TimeSpan.FromMilliseconds(50));
+            });
+
             endpointConfigurator.UseMessageRetry(r =>
             {
                 r.Exponential(

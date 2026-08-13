@@ -185,7 +185,13 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                 {
                     CorrelationId = ctx.Saga.CorrelationId,
                     Order = ctx.Saga.Order,
-                })));
+                })),
+
+            // A PaymentProcessed reply shouldn't be possible here (ProcessPayment isn't
+            // published until CheckingInventory resolves), but a duplicate/late-redelivered
+            // message can still land while the saga is mid-transition. Drop it instead of
+            // throwing UnhandledEventException.
+            Ignore(PaymentProcessed));
 
         // Payment resolves the saga: success confirms and finalizes, failure ends in Failed.
         During(ProcessingPayment,
@@ -206,6 +212,12 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                 .Then(ctx => _logger.LogWarning(
                     "Order {OrderId} [{CorrelationId}]: PaymentProcessed (declined) -> Failed",
                     ctx.Saga.Order.Id, ctx.Saga.CorrelationId)));
+
+        // Late/duplicate redeliveries after the saga has already finalized or dead-ended
+        // shouldn't crash the consumer — drop them.
+        During(Failed,
+            Ignore(InventoryChecked),
+            Ignore(PaymentProcessed));
 
         SetCompletedWhenFinalized();
     }
