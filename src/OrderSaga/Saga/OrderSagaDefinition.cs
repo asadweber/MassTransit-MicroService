@@ -1,4 +1,5 @@
-﻿using Infrastructure.Persistence;
+﻿using Application.Messaging.Events;
+using Infrastructure.Persistence;
 using MassTransit;
 using System;
 using System.Collections.Generic;
@@ -77,7 +78,31 @@ namespace OrderSaga.Saga
 
             // Ensures messages for the same saga (CorrelationId) are processed in order,
             // even though ConcurrentMessageLimit allows multiple sagas in parallel.
-            sagaConfigurator.UsePartitioner(endpointConfigurator.ConcurrentMessageLimit ?? 8, x => x.Saga.CorrelationId);
+            //sagaConfigurator.UsePartitioner(endpointConfigurator.ConcurrentMessageLimit ?? 16, x => x.Saga.CorrelationId);
+            // Same partitioner for all Order saga messages
+            var partitioner =
+                endpointConfigurator.CreatePartitioner(16);
+            
+            sagaConfigurator.Message<OrderCreated>(x =>
+            {
+                x.UsePartitioner(
+                    partitioner,
+                    context => context.Message.Order.Id);
+            });
+
+            sagaConfigurator.Message<InventoryChecked>(x =>
+            {
+                x.UsePartitioner(
+                    partitioner,
+                    context => context.Message.CorrelationId);
+            });
+
+            sagaConfigurator.Message<PaymentProcessed>(x =>
+            {
+                x.UsePartitioner(
+                    partitioner,
+                    context => context.Message.CorrelationId);
+            });
         }
     }
 }
