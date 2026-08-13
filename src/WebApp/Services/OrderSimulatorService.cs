@@ -24,21 +24,29 @@ public class OrderSimulatorService(
 
         var interval = TimeSpan.FromSeconds(
             config.GetValue("OrderSimulator:IntervalSeconds", 3));
+        var ordersPerTick = config.GetValue("OrderSimulator:OrdersPerTick", 1);
 
-        logger.LogInformation("Order simulator started — interval: {Interval}s", interval.TotalSeconds);
+        logger.LogInformation(
+            "Order simulator started — interval: {Interval}s, orders/tick: {OrdersPerTick}",
+            interval.TotalSeconds, ordersPerTick);
 
         using var timer = new PeriodicTimer(interval);
 
         while (await timer.WaitForNextTickAsync(stoppingToken))
         {
-            try
+            var tasks = Enumerable.Range(0, ordersPerTick).Select(async _ =>
             {
-                await PlaceOrderAsync(stoppingToken);
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                logger.LogError(ex, "Simulator failed to place order");
-            }
+                try
+                {
+                    await PlaceOrderAsync(stoppingToken);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    logger.LogError(ex, "Simulator failed to place order");
+                }
+            });
+
+            await Task.WhenAll(tasks);
         }
     }
 
