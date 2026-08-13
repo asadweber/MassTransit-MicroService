@@ -14,11 +14,15 @@ namespace OrderSaga.Saga
             IRegistrationContext context)
         {
 
-            // Broker-level buffer: how many unacked messages RabbitMQ will push at once
-            endpointConfigurator.PrefetchCount = 128;
+            // Broker-level buffer: how many unacked messages RabbitMQ will push at once.
+            // Kept at 2x ConcurrentMessageLimit, same ratio as the other 3 services.
+            endpointConfigurator.PrefetchCount = 32;
 
-            // In-process concurrency: how many messages MassTransit processes simultaneously
-            endpointConfigurator.ConcurrentMessageLimit = 64;
+            // In-process concurrency: how many messages MassTransit processes simultaneously.
+            // Lower than the other 3 services (64) — this endpoint repeatedly mutates shared
+            // per-order saga state (Mongo optimistic-concurrency writes), so fewer concurrent
+            // touches means less contention to retry through under heavy load.
+            endpointConfigurator.ConcurrentMessageLimit = 16;
 
             
             if (endpointConfigurator is IRabbitMqReceiveEndpointConfigurator rabbitMqEndpointConfigurator)
@@ -43,7 +47,7 @@ namespace OrderSaga.Saga
             endpointConfigurator.UseMessageRetry(r =>
             {
                 r.Handle<MongoDbConcurrencyException>();
-                r.Interval(5, TimeSpan.FromMilliseconds(50));
+                r.Interval(10, TimeSpan.FromMilliseconds(100));
             });
 
             // Trips after sustained failure (15% of a rolling 1-min window, min 10 attempts

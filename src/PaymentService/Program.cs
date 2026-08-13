@@ -43,8 +43,8 @@ builder.Services.AddMassTransit(x =>
         {
             e.Durable = true;
             e.AutoDelete = false;
-            e.PrefetchCount = 128;
-            e.ConcurrentMessageLimit = 64;
+            e.PrefetchCount = 32;
+            e.ConcurrentMessageLimit = 16;
 
             // Caps consumer throughput at 100 messages/sec for this endpoint.
             e.UseRateLimit(400, TimeSpan.FromSeconds(1));
