@@ -211,13 +211,20 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                 .TransitionTo(Failed)
                 .Then(ctx => _logger.LogWarning(
                     "Order {OrderId} [{CorrelationId}]: PaymentProcessed (declined) -> Failed",
-                    ctx.Saga.Order.Id, ctx.Saga.CorrelationId)));
+                    ctx.Saga.Order.Id, ctx.Saga.CorrelationId)),
+
+            // Mirrors the CheckingInventory guard: a late/duplicate InventoryChecked or a
+            // stale InventoryRetry firing after payment has already started shouldn't crash
+            // the consumer — drop it instead of throwing UnhandledEventException.
+            Ignore(InventoryChecked),
+            Ignore(InventoryRetry.Received));
 
         // Late/duplicate redeliveries after the saga has already finalized or dead-ended
         // shouldn't crash the consumer — drop them.
         During(Failed,
             Ignore(InventoryChecked),
-            Ignore(PaymentProcessed));
+            Ignore(PaymentProcessed),
+            Ignore(OrderCreated));
 
         SetCompletedWhenFinalized();
     }
