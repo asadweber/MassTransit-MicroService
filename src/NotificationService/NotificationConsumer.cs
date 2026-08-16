@@ -29,23 +29,14 @@ public class NotificationConsumer(
         var existing = (await uow.OrderNotifications.FindAsync(n => n.OrderId == msg.Order.Id))
             .FirstOrDefault();
 
-        if (existing is null)
-        {
-            await uow.OrderNotifications.AddAsync(new OrderNotification
-            {
-                OrderId = msg.Order.Id,
-                NotifyToEmail = true,
-                NotifyToSMS = true,
-                NotifyToPaci = true,
-                Result = "Sent"
-            });
-        }
-        else
+        if (existing is not null)
         {
             existing.Result = "Sent";
             await uow.OrderNotifications.Update(existing);
         }
 
+
         await uow.SaveChangesAsync();
+        await Task.CompletedTask;
     }
 }
