@@ -1,4 +1,4 @@
-@using OrderSaga.Saga
+@using Infrastructure.Persistence
 @model IEnumerable<OrderSagaState>
 
 <h1>Order Sagas</h1>
@@ -38,10 +38,10 @@
         @foreach (var saga in Model)
         {
             <tr>
-                <td>@saga.Order?.Id</td>
-                <td>@saga.Order?.CustomerName</td>
-                <td>@saga.Order?.OrderDate</td>
-                <td>@saga.Order?.TotalAmount</td>
+                <td>@saga.OrderId</td>
+                <td>@saga.CustomerName</td>
+                <td>@saga.OrderDate</td>
+                <td>@saga.TotalAmount</td>
                 <td>@saga.CurrentState</td>
                 <td>@saga.InventoryRetryCount</td>
                 <td>

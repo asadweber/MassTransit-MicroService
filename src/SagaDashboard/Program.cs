@@ -1,8 +1,8 @@
 using Application;
 using Infrastructure;
+using Infrastructure.Persistence;
 using InventoryService;
 using MassTransit;
-using MongoDB.Driver;
 using NotificationService;
 using OrderSaga.Saga;
 using PaymentService;
@@ -17,16 +17,6 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApplication();
 
-var mongoSection = builder.Configuration.GetSection("MongoDb").Get<MongoDbSettings>();
-
-// Direct Mongo access for the saga list page (read-only, separate from MassTransit's own repository).
-builder.Services.AddSingleton(sp =>
-{
-    var client = new MongoClient(mongoSection!.ConnectionString);
-    var db = client.GetDatabase(mongoSection.DatabaseName);
-    return db.GetCollection<OrderSagaState>(mongoSection.SagaCollection);
-});
-
 // ── MassTransit — dashboard visibility only ─────────────────────────────────
 // Registers every consumer + the saga so the MassTransit dashboard shows the
 // full flow across all services, but never binds a ReceiveEndpoint of its own,
@@ -40,11 +30,10 @@ builder.Services.AddMassTransit(x =>
     x.AddConsumer<NotificationConsumer>();
 
     x.AddSagaStateMachine<OrderStateMachine, OrderSagaState, DashboardOnlySagaDefinition>()
-        .MongoDbRepository(r =>
+        .EntityFrameworkRepository(r =>
         {
-            r.Connection = mongoSection!.ConnectionString;
-            r.DatabaseName = mongoSection.DatabaseName;
-            r.CollectionName = mongoSection.SagaCollection;
+            r.ExistingDbContext<AppDbContext>();
+            r.ConcurrencyMode = ConcurrencyMode.Optimistic;
         });
 
     x.UsingRabbitMq((ctx, cfg) =>
