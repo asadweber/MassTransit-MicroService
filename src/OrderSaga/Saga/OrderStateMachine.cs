@@ -189,8 +189,8 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
 
             // Fires when the scheduled delay elapses (token stored via InventoryRetryTokenId) —
             // re-publish as CheckInventory
-            // can tell a saga-driven retry apart from the initial check. Reads ctx.Saga.Order
-            // (not ctx.Message) so an admin edit to the order's line items while stuck retrying
+            // can tell a saga-driven retry apart from the initial check. Reads saga state via
+            // ToOrderDto(ctx.Saga) (not ctx.Message) so an admin edit to the order's line items while stuck retrying
             // is picked up on the next check, instead of re-checking the stale scheduled payload.
             When(InventoryRetry.Received)
                 .Then(ctx => _logger.LogInformation(
