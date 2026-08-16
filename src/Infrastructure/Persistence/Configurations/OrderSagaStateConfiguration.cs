@@ -1,6 +1,6 @@
+using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Infrastructure.Persistence;
 
 namespace Infrastructure.Persistence.Configurations;
 
@@ -13,6 +13,8 @@ public class OrderSagaStateConfiguration : IEntityTypeConfiguration<OrderSagaSta
         builder.HasKey(s => s.CorrelationId);
 
         builder.Property(s => s.Version).IsConcurrencyToken();
+
+        builder.Property(s => s.CurrentState).HasMaxLength(50);
 
         builder.Property(s => s.CustomerName).HasMaxLength(200);
         builder.Property(s => s.TotalAmount).HasPrecision(18, 2);
