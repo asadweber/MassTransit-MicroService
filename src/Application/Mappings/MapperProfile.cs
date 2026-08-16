@@ -12,7 +12,6 @@ public class MapperProfile : Profile
 
         CreateMap<OrderNotification, OrderNotificationDto>().ReverseMap();
 
-
         CreateMap<OrderDetail, OrderDetailDto>().ReverseMap();
 
         CreateMap<Order, OrderDto>()

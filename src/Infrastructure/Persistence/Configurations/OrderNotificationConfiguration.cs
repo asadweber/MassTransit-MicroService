@@ -21,6 +21,7 @@ public class OrderNotificationConfiguration : IEntityTypeConfiguration<OrderNoti
 
         builder.HasIndex(n => n.OrderId).IsUnique();
 
+        // OrderNotification is dependent on Order.
         builder.HasOne(n => n.Order)
             .WithOne(o => o.OrderNotification)
             .HasForeignKey<OrderNotification>(n => n.OrderId)
