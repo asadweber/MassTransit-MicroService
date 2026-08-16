@@ -22,13 +22,10 @@ builder.Services.AddMassTransit(x =>
     x.AddBusMetadataExplorer();
 
     x.AddSagaStateMachine<OrderStateMachine, OrderSagaState, OrderSagaDefinition>()
-        .MongoDbRepository(r =>
+        .EntityFrameworkRepository(r =>
         {
-            // Use the same connection string — MassTransit will resolve
-            // the shared IMongoClient internally via ClientFactory below
-            r.Connection = mongoSection.ConnectionString;
-            r.DatabaseName = mongoSection.DatabaseName;
-            r.CollectionName = mongoSection.SagaCollection;
+            r.ExistingDbContext<AppDbContext>();
+            r.ConcurrencyMode = ConcurrencyMode.Optimistic;
         });
 
 
@@ -56,25 +53,7 @@ builder.Services.AddMassTransit(x =>
     });
 });
 
-// ── Ensure saga collection exists ─────────────────────────────────────────
 var host = builder.Build();
-
-using (var scope = host.Services.CreateScope())
-{
-    var mongoClient = scope.ServiceProvider.GetRequiredService<IMongoClient>();
-
-    var database = mongoClient.GetDatabase(
-        builder.Configuration["MongoDb:DatabaseName"]);
-
-    var collectionName = builder.Configuration["MongoDb:SagaCollection"];
-
-    var collections = await database.ListCollectionNames().ToListAsync();
-
-    if (!collections.Contains(collectionName))
-    {
-        await database.CreateCollectionAsync(collectionName);
-    }
-}
 
 //Ensure Serilog TTL index exists (or recreate if retention period changed)
 SerilogRetentionSetup.EnsureSerilogTtlIndex(builder.Configuration, retentionDays: 1);
