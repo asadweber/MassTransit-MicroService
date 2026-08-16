@@ -11,6 +11,9 @@ public class OrderNotification
     public bool NotifyToSMS { get; set; }
     public bool NotifyToPaci { get; set; }
 
-    public string Result { get; set; } = string.Empty;
+    public string? EmailResult { get; set; }
+    public string? SMSResult { get; set; }
+    public string? PaciResult { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

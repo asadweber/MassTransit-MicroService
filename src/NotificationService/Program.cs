@@ -25,6 +25,9 @@ builder.Services.AddMassTransit(x =>
 {
     x.AddBusMetadataExplorer();
     x.AddConsumer<NotificationConsumer>();
+    x.AddConsumer<EmailSenderConsumer>();
+    x.AddConsumer<SMSSenderConsumer>();
+    x.AddConsumer<PaciSenderConsumer>();
 
 
     x.UsingRabbitMq((ctx, cfg) =>
@@ -106,8 +109,11 @@ builder.Services.AddMassTransit(x =>
             var partitioner = e.CreatePartitioner(e.ConcurrentMessageLimit!.Value);
             e.UsePartitioner<OrderConfirmed>(partitioner, m => m.Message.CorrelationId);
 
-            // ✅ Consumer — always last
+            // ✅ Consumers — always last
             e.ConfigureConsumer<NotificationConsumer>(ctx);
+            e.ConfigureConsumer<EmailSenderConsumer>(ctx);
+            e.ConfigureConsumer<SMSSenderConsumer>(ctx);
+            e.ConfigureConsumer<PaciSenderConsumer>(ctx);
         });
 
         cfg.ConfigureEndpoints(ctx);

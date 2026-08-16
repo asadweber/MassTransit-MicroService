@@ -1,7 +1,5 @@
 using Application.Interfaces;
 using Application.Messaging.Events;
-using Domain;
-using Domain.Entities;
 using MassTransit;
 using Microsoft.Extensions.Logging;
 
@@ -10,8 +8,7 @@ namespace NotificationService;
 [ExcludeFromConfigureEndpoints]
 public class NotificationConsumer(
     ILogger<NotificationConsumer> logger,
-    IOrderService orderService,
-    IUnitOfWork uow) : IConsumer<OrderConfirmed>
+    IOrderService orderService) : IConsumer<OrderConfirmed>
 {
     public async Task Consume(ConsumeContext<OrderConfirmed> context)
     {
@@ -23,20 +20,6 @@ public class NotificationConsumer(
         order.Status = "Complete";
         await orderService.UpdateAsync(msg.Order.Id, order);
 
-        logger.LogInformation("Confirmed. Notification sent.");
-
-        // TODO: send email / SMS / PACI notification for real — stubbed as sent for now.
-        var existing = (await uow.OrderNotifications.FindAsync(n => n.OrderId == msg.Order.Id))
-            .FirstOrDefault();
-
-        if (existing is not null)
-        {
-            existing.Result = "Sent";
-            await uow.OrderNotifications.Update(existing);
-        }
-
-
-        await uow.SaveChangesAsync();
-        await Task.CompletedTask;
+        logger.LogInformation("Confirmed.");
     }
 }
