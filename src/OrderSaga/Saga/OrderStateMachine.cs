@@ -327,8 +327,8 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
 
         OrderNotification = saga.OrderNotification == null ? null : new OrderNotificationDto
         {
+            Id= saga.OrderNotification.Id,
             OrderId = saga.OrderId,
-
             NotifyToEmail = saga.OrderNotification.NotifyToEmail,
             NotifyToSMS = saga.OrderNotification.NotifyToSMS,
             NotifyToPaci = saga.OrderNotification.NotifyToPaci,

@@ -2,7 +2,7 @@ namespace Infrastructure.Persistence;
 
 public class SagaOrderNotification
 {
-    public int Id { get; set; }
+    public long Id { get; set; }
     public Guid OrderSagaStateCorrelationId { get; set; }
 
     public bool NotifyToEmail { get; set; }
