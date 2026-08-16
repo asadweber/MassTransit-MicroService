@@ -5,6 +5,7 @@ using Application.Messaging.Events;
 using Infrastructure;
 using Infrastructure.Persistence;
 using MassTransit;
+using Microsoft.EntityFrameworkCore;
 using NotificationService;
 using Serilog;
 
@@ -40,7 +41,7 @@ builder.Services.AddMassTransit(x =>
         cfg.UseDelayedMessageScheduler();
 
 
-        // ✅ Manual endpoint — Inventory Service owns this queue
+        // Manual endpoint — Notification Service owns this queue
         cfg.ReceiveEndpoint("notification-queue", e =>
         {
             e.Durable = true;
@@ -53,7 +54,7 @@ builder.Services.AddMassTransit(x =>
 
             e.UseMessageRetry(r =>
             {
-                r.Handle<MongoDbConcurrencyException>();
+                r.Handle<DbUpdateConcurrencyException>();
                 r.Interval(10, TimeSpan.FromMilliseconds(100));
             });
 

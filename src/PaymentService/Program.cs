@@ -4,6 +4,7 @@ using Application.Messaging.Events;
 using Infrastructure;
 using Infrastructure.Persistence;
 using MassTransit;
+using Microsoft.EntityFrameworkCore;
 using PaymentService;
 using Serilog;
 
@@ -38,7 +39,7 @@ builder.Services.AddMassTransit(x =>
         // RabbitMQ delayed-exchange plugin (rabbitmq_delayed_message_exchange).
         cfg.UseDelayedMessageScheduler();
 
-        // ✅ Manual endpoint — Inventory Service owns this queue
+        // Manual endpoint — Payment Service owns this queue
         cfg.ReceiveEndpoint("payment-queue", e =>
         {
             e.Durable = true;
@@ -51,7 +52,7 @@ builder.Services.AddMassTransit(x =>
 
             e.UseMessageRetry(r =>
             {
-                r.Handle<MongoDbConcurrencyException>();
+                r.Handle<DbUpdateConcurrencyException>();
                 r.Interval(10, TimeSpan.FromMilliseconds(100));
             });
 

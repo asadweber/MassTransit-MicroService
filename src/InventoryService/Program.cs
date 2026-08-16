@@ -3,6 +3,7 @@ using Application;              // AddApplication DI extension
 using Infrastructure;           // AddInfrastructure DI extension
 using InventoryService;         // InventoryConsumer
 using MassTransit;              // bus, outbox, retry, RabbitMQ transport
+using Microsoft.EntityFrameworkCore;
 using Serilog;
 
 
@@ -56,7 +57,7 @@ builder.Services.AddMassTransit(x =>
 
             e.UseMessageRetry(r =>
             {
-                r.Handle<MongoDbConcurrencyException>();
+                r.Handle<DbUpdateConcurrencyException>();
                 r.Interval(10, TimeSpan.FromMilliseconds(100));
             });
 
