@@ -2,7 +2,7 @@ namespace Domain.Entities;
 
 public class OrderNotification
 {
-    public int Id { get; set; }
+    public long Id { get; set; }
 
     public bool NotifyToEmail { get; set; }
     public bool NotifyToSMS { get; set; }
@@ -15,6 +15,6 @@ public class OrderNotification
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
 
-    public int OrderId { get; set; }
+    public long OrderId { get; set; }
     public Order Order { get; set; } = null!;
 }
