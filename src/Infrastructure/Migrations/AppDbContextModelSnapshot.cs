@@ -152,8 +152,8 @@ namespace Infrastructure.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<int>("Stock")
-                        .HasColumnType("int");
+                    b.Property<long>("Stock")
+                        .HasColumnType("bigint");
 
                     b.HasKey("Id");
 
@@ -165,35 +165,35 @@ namespace Infrastructure.Migrations
                             Id = 1L,
                             Name = "Laptop",
                             Price = 999.99m,
-                            Stock = 50
+                            Stock = 50L
                         },
                         new
                         {
                             Id = 2L,
                             Name = "Wireless Mouse",
                             Price = 29.99m,
-                            Stock = 200
+                            Stock = 200L
                         },
                         new
                         {
                             Id = 3L,
                             Name = "USB-C Hub",
                             Price = 49.99m,
-                            Stock = 150
+                            Stock = 150L
                         },
                         new
                         {
                             Id = 4L,
                             Name = "Mechanical Keyboard",
                             Price = 89.99m,
-                            Stock = 75
+                            Stock = 75L
                         },
                         new
                         {
                             Id = 5L,
                             Name = "Monitor 27\"",
                             Price = 349.99m,
-                            Stock = 30
+                            Stock = 30L
                         });
                 });
 

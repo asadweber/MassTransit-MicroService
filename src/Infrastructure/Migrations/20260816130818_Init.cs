@@ -66,7 +66,7 @@ namespace Infrastructure.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Price = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
-                    Stock = table.Column<int>(type: "int", nullable: false)
+                    Stock = table.Column<long>(type: "bigint", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -155,11 +155,11 @@ namespace Infrastructure.Migrations
                 {
                     Id = table.Column<long>(type: "bigint", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    OrderId = table.Column<long>(type: "bigint", nullable: false),
                     ProductId = table.Column<long>(type: "bigint", nullable: false),
                     OrderQty = table.Column<long>(type: "bigint", nullable: false),
                     UnitPrice = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
-                    Total = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false)
+                    Total = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    OrderId = table.Column<long>(type: "bigint", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -183,11 +183,11 @@ namespace Infrastructure.Migrations
                 columns: new[] { "Id", "Name", "Price", "Stock" },
                 values: new object[,]
                 {
-                    { 1L, "Laptop", 999.99m, 50 },
-                    { 2L, "Wireless Mouse", 29.99m, 200 },
-                    { 3L, "USB-C Hub", 49.99m, 150 },
-                    { 4L, "Mechanical Keyboard", 89.99m, 75 },
-                    { 5L, "Monitor 27\"", 349.99m, 30 }
+                    { 1L, "Laptop", 999.99m, 50L },
+                    { 2L, "Wireless Mouse", 29.99m, 200L },
+                    { 3L, "USB-C Hub", 49.99m, 150L },
+                    { 4L, "Mechanical Keyboard", 89.99m, 75L },
+                    { 5L, "Monitor 27\"", 349.99m, 30L }
                 });
 
             migrationBuilder.CreateIndex(
