@@ -1,3 +1,5 @@
+using Domain.Entities;
+
 namespace Application.Dtos;
 
 [Serializable]
@@ -10,4 +12,7 @@ public class OrderDto
     public string Status { get; set; } = "Pending";
 
     public List<OrderDetailDto> OrderDetails { get; set; } = [];
+
+    public OrderNotificationDto? OrderNotification { get; set; }
+
 }

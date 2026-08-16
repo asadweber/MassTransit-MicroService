@@ -2,6 +2,7 @@ using Application.Interfaces;
 using Application.Messaging.Events;
 using MassTransit;
 using Microsoft.Extensions.Logging;
+using static MassTransit.Monitoring.Performance.BuiltInCounters;
 
 namespace NotificationService;
 
@@ -20,6 +21,15 @@ public class NotificationConsumer(
         order.Status = "Complete";
         await orderService.UpdateAsync(msg.Order.Id, order);
 
-        logger.LogInformation("Confirmed.");
+        await context.Publish(new OrderConfirmedCompleted
+        {
+            CorrelationId = msg.CorrelationId,
+            Process = OrderConfirmationProcess.Notification
+        });
+
+        logger.LogInformation(
+            "Order {OrderId} [{CorrelationId}]: Notification completed",
+            msg.Order.Id,
+            msg.CorrelationId);
     }
 }

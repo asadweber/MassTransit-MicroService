@@ -12,21 +12,50 @@ public class SMSSenderConsumer(
 {
     public async Task Consume(ConsumeContext<OrderConfirmed> context)
     {
-        var msg = context.Message;
-        using var _ = Serilog.Context.LogContext.PushProperty("CorrelationId", msg.CorrelationId);
-        using var __ = Serilog.Context.LogContext.PushProperty("OrderId", msg.Order.Id);
+        var message = context.Message;
 
-        var notification = (await uow.OrderNotifications.FindAsync(n => n.OrderId == msg.Order.Id))
+        // If SMS notification is not required,
+        // do nothing.
+        if (!message.Order.OrderNotification?.NotifyToSMS ?? false)
+        {
+            logger.LogInformation(
+                "Order {OrderId} [{CorrelationId}]: SMS notification is disabled",
+                message.Order.Id,
+                message.CorrelationId);
+
+            return;
+        }
+
+        logger.LogInformation(
+            "Order {OrderId} [{CorrelationId}]: Sending email",
+            message.Order.Id,
+            message.CorrelationId);
+
+        // --------------------------------------------------
+        // Your email logic
+        // --------------------------------------------------
+
+        var notification = (await uow.OrderNotifications.FindAsync(n => n.OrderId == message.Order.Id))
             .FirstOrDefault();
 
-        if (notification is null || !notification.NotifyToSMS)
-            return;
+        if (notification is not null && notification.NotifyToSMS)
+        {
+            // TODO: send SMS for real — stubbed as sent for now.
+            notification.SMSSendStatus = true;
+            await uow.OrderNotifications.Update(notification);
+            await uow.SaveChangesAsync();
+        }
 
-        // TODO: send SMS for real — stubbed as sent for now.
-        notification.SMSSendStatus = true;
-        await uow.OrderNotifications.Update(notification);
-        await uow.SaveChangesAsync();
+        // If processing succeeds, publish completion.
+        await context.Publish(new OrderConfirmedCompleted
+        {
+            CorrelationId = message.CorrelationId,
+            Process = OrderConfirmationProcess.SMS
+        });
 
-        logger.LogInformation("SMS notification sent.");
+        logger.LogInformation(
+            "Order {OrderId} [{CorrelationId}]: SMS completed",
+            message.Order.Id,
+            message.CorrelationId);
     }
 }

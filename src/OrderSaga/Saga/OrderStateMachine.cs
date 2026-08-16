@@ -52,6 +52,8 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
     // Reply from PaymentService indicating charge outcome.
     public Event<PaymentProcessed> PaymentProcessed { get; private set; } = null!;
 
+    public Event<OrderConfirmedCompleted> OrderConfirmedCompleted{get;private set;} = default!;
+
     #endregion
 
 
@@ -80,6 +82,17 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
 
         Event(() => PaymentProcessed, x =>
             x.CorrelateById(ctx => ctx.Message.CorrelationId));
+
+        Event(
+           () => OrderConfirmedCompleted,
+           e =>
+           {
+               e.CorrelateById(context =>
+                   context.Message.CorrelationId);
+
+               e.OnMissingInstance(m =>
+                   m.Discard());
+           });
 
         // Business-level retry for "not available yet" (no exception thrown), distinct from
         // transport-level UseMessageRetry/UseDelayedRedelivery which only handle faulted messages.
