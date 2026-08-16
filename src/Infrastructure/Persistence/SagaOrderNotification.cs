@@ -4,8 +4,6 @@ public class SagaOrderNotification
 {
     public long Id { get; set; }
 
-    public long OrderId { get; set; }
-
     public Guid OrderSagaStateCorrelationId { get; set; }
 
     public bool NotifyToEmail { get; set; }

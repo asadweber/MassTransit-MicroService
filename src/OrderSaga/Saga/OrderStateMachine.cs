@@ -108,6 +108,10 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                 .Then(ctx =>
                 {
                     var order = ctx.Message.Order;
+                    
+                    var notification = order.OrderNotification;
+
+
                     ctx.Saga.OrderId = order.Id;
                     ctx.Saga.CustomerName = order.CustomerName;
                     ctx.Saga.OrderDate = order.OrderDate;
@@ -121,6 +125,21 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                         UnitPrice = d.UnitPrice,
                         Total = d.Total,
                     }).ToList();
+                    ctx.Saga.OrderNotification = notification is null? null
+                        : new SagaOrderNotification
+                        {
+                            OrderSagaStateCorrelationId = ctx.Saga.CorrelationId,
+                            OrderId = order.Id,
+
+                            NotifyToEmail = notification.NotifyToEmail,
+                            NotifyToSMS = notification.NotifyToSMS,
+                            NotifyToPaci = notification.NotifyToPaci,
+
+                            // Initial completion state
+                            EmailSendStatus = notification.EmailSendStatus,
+                            SMSSendStatus = notification.SMSSendStatus,
+                            PaciSendStatus = notification.PaciSendStatus
+                        };
 
                     Serilog.Context.LogContext.PushProperty("CorrelationId", ctx.Saga.CorrelationId);
                     Serilog.Context.LogContext.PushProperty("OrderId", ctx.Saga.OrderId);
@@ -308,5 +327,18 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
             UnitPrice = d.UnitPrice,
             Total = d.Total,
         }).ToList(),
+
+        OrderNotification = saga.OrderNotification == null? null: new OrderNotificationDto
+    {
+        OrderId = saga.OrderId,
+
+        NotifyToEmail = saga.OrderNotification.NotifyToEmail,
+        NotifyToSMS = saga.OrderNotification.NotifyToSMS,
+        NotifyToPaci = saga.OrderNotification.NotifyToPaci,
+
+        EmailSendStatus = saga.OrderNotification.EmailSendStatus,
+        SMSSendStatus = saga.OrderNotification.SMSSendStatus,
+        PaciSendStatus = saga.OrderNotification.PaciSendStatus
+    }
     };
 }
