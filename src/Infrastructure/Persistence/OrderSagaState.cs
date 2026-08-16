@@ -11,7 +11,7 @@ public class OrderSagaState : SagaStateMachineInstance, ISagaVersion
 
     public int Version { get; set; }
 
-    public int OrderId { get; set; }
+    public long OrderId { get; set; }
     public string CustomerName { get; set; } = string.Empty;
     public DateTime OrderDate { get; set; }
     public decimal TotalAmount { get; set; }

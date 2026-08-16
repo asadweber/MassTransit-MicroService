@@ -30,5 +30,13 @@ public class OrderSagaStateConfiguration : IEntityTypeConfiguration<OrderSagaSta
             detail.Property(d => d.UnitPrice).HasPrecision(18, 2);
             detail.Property(d => d.Total).HasPrecision(18, 2);
         });
+        // One-to-one relationship
+        builder.HasOne(x => x.OrderNotification)
+            .WithOne(x => x.OrderSagaState)
+            .HasForeignKey<SagaOrderNotification>(
+                x => x.OrderSagaStateCorrelationId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+
     }
 }

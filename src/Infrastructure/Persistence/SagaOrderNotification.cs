@@ -2,10 +2,12 @@ namespace Infrastructure.Persistence;
 
 public class SagaOrderNotification
 {
-    public int Id { get; set; }
+    public long Id { get; set; }
 
-    public int OrderId { get; set; }
-    
+    public long OrderId { get; set; }
+
+    public Guid OrderSagaStateCorrelationId { get; set; }
+
     public bool NotifyToEmail { get; set; }
     public bool NotifyToSMS { get; set; }
     public bool NotifyToPaci { get; set; }
@@ -15,4 +17,7 @@ public class SagaOrderNotification
     public bool PaciSendStatus { get; set; } = false;
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    public OrderSagaState OrderSagaState { get; set; } = default!;
+
 }
