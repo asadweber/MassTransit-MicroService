@@ -29,19 +29,4 @@ public class OrderSagaState : SagaStateMachineInstance, ISagaVersion
 
     public Guid? InventoryRetryTokenId { get; set; }
 
-
-
-
-    // Notification configuration
-    public bool NotifyToEmail { get; set; }
-    public bool NotifyToSMS { get; set; }
-    public bool NotifyToPaci { get; set; }
-
-    // Completion tracking
-    public bool EmailCompleted { get; set; }
-    public bool SmsCompleted { get; set; }
-    public bool PaciCompleted { get; set; }
-    public bool NotificationCompleted { get; set; }
-
-
 }
