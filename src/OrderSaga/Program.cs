@@ -2,7 +2,6 @@ using Application;
 using Infrastructure;
 using Infrastructure.Persistence;
 using MassTransit;
-using MongoDB.Driver;
 using OrderSaga.Saga;
 using Serilog;
 
@@ -14,8 +13,6 @@ builder.Services.AddSerilog(cfg => cfg.ReadFrom.Configuration(builder.Configurat
 
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApplication();
-
-var mongoSection = builder.Configuration.GetSection("MongoDb").Get<MongoDbSettings>();
 
 builder.Services.AddMassTransit(x =>
 {
