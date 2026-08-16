@@ -20,6 +20,8 @@ public class OrderSagaStateConfiguration : IEntityTypeConfiguration<OrderSagaSta
         builder.Property(s => s.TotalAmount).HasPrecision(18, 2);
         builder.Property(s => s.Status).HasMaxLength(50);
 
+        builder.HasIndex(s => s.OrderId);
+
         builder.OwnsMany(s => s.OrderDetails, detail =>
         {
             detail.ToTable("SagaOrderDetails");
