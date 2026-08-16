@@ -15,13 +15,13 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
 {
     // Give up polling inventory after 7 days of continuous unavailability.
     public static readonly TimeSpan MaxRetryWindow = TimeSpan.FromDays(7);
-  
+
     // Delay before the first inventory re-check.
     public static readonly TimeSpan FirstRetryDelay = TimeSpan.FromMinutes(1);
-    
+
     // Ceiling for any single backoff step, however large BackoffFactor grows it.
     public static readonly TimeSpan MaxRetryDelay = TimeSpan.FromDays(1);
-    
+
     // Multiplier applied per retry attempt (1m, 5m, 25m, 125m, ...).
     private const int BackoffFactor = 5;
 
@@ -52,7 +52,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
     // Reply from PaymentService indicating charge outcome.
     public Event<PaymentProcessed> PaymentProcessed { get; private set; } = null!;
 
-    public Event<OrderConfirmedCompleted> OrderConfirmedCompleted{get;private set;} = default!;
+    public Event<OrderConfirmedCompleted> OrderConfirmedCompleted { get; private set; } = default!;
 
     #endregion
 
@@ -108,7 +108,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                 .Then(ctx =>
                 {
                     var order = ctx.Message.Order;
-                    
+
                     var notification = order.OrderNotification;
 
 
@@ -125,7 +125,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                         UnitPrice = d.UnitPrice,
                         Total = d.Total,
                     }).ToList();
-                    ctx.Saga.OrderNotification = notification is null? null
+                    ctx.Saga.OrderNotification = notification is null ? null
                         : new SagaOrderNotification
                         {
                             OrderSagaStateCorrelationId = ctx.Saga.CorrelationId,
@@ -175,7 +175,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                     .Then(ctx =>
                     {
                         // Record the first time inventory became unavailable.
-                        ctx.Saga.FirstUnavailableAt ??= DateTime.UtcNow;                        
+                        ctx.Saga.FirstUnavailableAt ??= DateTime.UtcNow;
                     })
                     .IfElse(ctx => IsRetryWindowExpired(ctx.Saga),
 
@@ -278,7 +278,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
     /// <summary>
     /// Exponential backoff (x5 per attempt: 1m, 5m, 25m, 125m, ...), capped at <see cref="MaxRetryDelay"/> per step.
     /// </summary>
-    private  TimeSpan GetRetryDelay(int retryCount)
+    private TimeSpan GetRetryDelay(int retryCount)
     {
         if (retryCount <= 1)
             return FirstRetryDelay;
@@ -302,7 +302,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
         return delay;
     }
 
-    private  bool IsRetryWindowExpired(OrderSagaState saga)
+    private bool IsRetryWindowExpired(OrderSagaState saga)
     {
         return saga.FirstUnavailableAt.HasValue &&
                DateTime.UtcNow - saga.FirstUnavailableAt.Value >= MaxRetryWindow;
@@ -325,17 +325,17 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
             Total = d.Total,
         }).ToList(),
 
-        OrderNotification = saga.OrderNotification == null? null: new OrderNotificationDto
-    {
-        OrderId = saga.OrderId,
+        OrderNotification = saga.OrderNotification == null ? null : new OrderNotificationDto
+        {
+            OrderId = saga.OrderId,
 
-        NotifyToEmail = saga.OrderNotification.NotifyToEmail,
-        NotifyToSMS = saga.OrderNotification.NotifyToSMS,
-        NotifyToPaci = saga.OrderNotification.NotifyToPaci,
+            NotifyToEmail = saga.OrderNotification.NotifyToEmail,
+            NotifyToSMS = saga.OrderNotification.NotifyToSMS,
+            NotifyToPaci = saga.OrderNotification.NotifyToPaci,
 
-        EmailSendStatus = saga.OrderNotification.EmailSendStatus,
-        SMSSendStatus = saga.OrderNotification.SMSSendStatus,
-        PaciSendStatus = saga.OrderNotification.PaciSendStatus
-    }
+            EmailSendStatus = saga.OrderNotification.EmailSendStatus,
+            SMSSendStatus = saga.OrderNotification.SMSSendStatus,
+            PaciSendStatus = saga.OrderNotification.PaciSendStatus
+        }
     };
 }
