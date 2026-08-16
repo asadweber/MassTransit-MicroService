@@ -77,7 +77,13 @@ public class OrderSimulatorService(
                 ProductId = p.Id,
                 OrderQty  = Random.Shared.Next(1, 6),
                 UnitPrice = p.Price
-            }).ToList()
+            }).ToList(),
+            OrderNotification = new OrderNotification
+            {
+                NotifyToEmail = Random.Shared.Next(2) == 1,
+                NotifyToSMS   = Random.Shared.Next(2) == 1,
+                NotifyToPaci  = Random.Shared.Next(2) == 1
+            }
         };
 
         foreach (var d in order.OrderDetails)

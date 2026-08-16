@@ -26,14 +26,26 @@ public class NotificationConsumer(
         logger.LogInformation("Confirmed. Notification sent.");
 
         // TODO: send email / SMS / PACI notification for real — stubbed as sent for now.
-        await uow.OrderNotifications.AddAsync(new OrderNotification
+        var existing = (await uow.OrderNotifications.FindAsync(n => n.OrderId == msg.Order.Id))
+            .FirstOrDefault();
+
+        if (existing is null)
         {
-            OrderId = msg.Order.Id,
-            NotifyToEmail = true,
-            NotifyToSMS = true,
-            NotifyToPaci = true,
-            Result = "Sent"
-        });
+            await uow.OrderNotifications.AddAsync(new OrderNotification
+            {
+                OrderId = msg.Order.Id,
+                NotifyToEmail = true,
+                NotifyToSMS = true,
+                NotifyToPaci = true,
+                Result = "Sent"
+            });
+        }
+        else
+        {
+            existing.Result = "Sent";
+            await uow.OrderNotifications.Update(existing);
+        }
+
         await uow.SaveChangesAsync();
     }
 }
