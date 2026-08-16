@@ -32,6 +32,8 @@ namespace OrderSaga.Saga
             {
                 rabbitMqEndpointConfigurator.Durable = true;
                 rabbitMqEndpointConfigurator.AutoDelete = false;
+                rabbitMqEndpointConfigurator.PrefetchCount= rabbitMqOptions.PrefetchCount;
+                rabbitMqEndpointConfigurator.ConcurrentMessageLimit= rabbitMqOptions.ConcurrentMessageLimit;
             }
             // Outer policy — added first, so it wraps everything below: exponential
             // retry for real faults that survive the inner concurrency-specific retry.
