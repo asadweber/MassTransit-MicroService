@@ -94,7 +94,7 @@ builder.Services.AddMassTransit(x =>
             });
 
             // Keeps messages for the same order (CorrelationId) processed in order,
-            // even though ConcurrentMessageLimit allows 8 messages in parallel.
+            // even though ConcurrentMessageLimit allows 16 messages in parallel.
             var partitioner = e.CreatePartitioner(e.ConcurrentMessageLimit ?? 8);
             e.UsePartitioner<OrderConfirmed>(partitioner, m => m.Message.CorrelationId);
 

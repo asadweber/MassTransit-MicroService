@@ -97,13 +97,13 @@ builder.Services.AddMassTransit(x =>
             });
 
             // Keeps messages for the same inventory correlation processed in order,
-            // even though ConcurrentMessageLimit allows 8 messages in parallel.
+            // even though ConcurrentMessageLimit allows 16 messages in parallel.
             // NOTE: this only protects CheckInventory. If InventoryConsumer also
             // handles other message types on this endpoint (e.g. ReleaseInventory,
             // AdjustStock) that can mutate the same inventory row, add a partitioner
             // for each of those types too — otherwise those messages get zero
             // serialization protection against concurrent mutation of the same item.
-            var partitioner = e.CreatePartitioner(8);
+            var partitioner = e.CreatePartitioner(e.ConcurrentMessageLimit ?? 16);
             e.UsePartitioner<CheckInventory>(partitioner, m => m.Message.CorrelationId);
 
             // Consumer — always configured last, innermost in the pipeline.
