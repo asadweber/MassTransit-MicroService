@@ -79,11 +79,11 @@ namespace OrderSaga.Saga
 
             // Ensures messages for the same saga (CorrelationId) are processed in order,
             // even though ConcurrentMessageLimit allows multiple sagas in parallel.
-            sagaConfigurator.UsePartitioner(endpointConfigurator.ConcurrentMessageLimit ?? 16, x => x.Saga.CorrelationId);
-            
-            // Same partitioner for all Order saga messages
+            // Applied per-message-type below (not a blanket sagaConfigurator.UsePartitioner)
+            // so OrderCreated can key on Order.Id (no CorrelationId exists yet at that point)
+            // while the later events key on the saga's own CorrelationId.
             var partitioner =
-                endpointConfigurator.CreatePartitioner(16);
+                endpointConfigurator.CreatePartitioner(endpointConfigurator.ConcurrentMessageLimit ?? 16);
             
             sagaConfigurator.Message<OrderCreated>(x =>
             {
