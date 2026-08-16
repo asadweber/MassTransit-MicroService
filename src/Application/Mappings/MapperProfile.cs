@@ -10,6 +10,9 @@ public class MapperProfile : Profile
     {
         CreateMap<Product, ProductDto>().ReverseMap();
 
+        CreateMap<OrderNotification, OrderNotificationDto>().ReverseMap();
+
+
         CreateMap<OrderDetail, OrderDetailDto>().ReverseMap();
 
         CreateMap<Order, OrderDto>()

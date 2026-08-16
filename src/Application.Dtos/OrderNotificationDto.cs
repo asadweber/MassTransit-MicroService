@@ -2,9 +2,9 @@ namespace Domain.Entities;
 
 public class OrderNotificationDto
 {
-    public int Id { get; set; }
+    public long Id { get; set; }
 
-    public int OrderId { get; set; }
+    public long OrderId { get; set; }
     public Order Order { get; set; } = null!;
 
     public bool NotifyToEmail { get; set; }
