@@ -2,6 +2,7 @@ using Domain.Entities;
 
 namespace Application.Dtos;
 
+[Serializable]
 public class OrderNotificationDto
 {
     public long Id { get; set; }

@@ -128,6 +128,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                     ctx.Saga.OrderNotification = notification is null ? null
                         : new SagaOrderNotification
                         {
+                            Id= notification.Id,
                             OrderSagaStateCorrelationId = ctx.Saga.CorrelationId,
                             NotifyToEmail = notification.NotifyToEmail,
                             NotifyToSMS = notification.NotifyToSMS,
