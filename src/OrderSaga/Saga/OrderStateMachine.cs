@@ -1,3 +1,4 @@
+using Application.Dtos;
 using Application.Messaging.Command;
 using Application.Messaging.Events;
 using MassTransit;
@@ -70,7 +71,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
         // First event for a saga instance: correlate by OrderId (no CorrelationId exists yet)
         // and mint a new one. All later events correlate by that generated CorrelationId.
         Event(() => OrderCreated, x =>
-            x.CorrelateBy((instance, context) => instance.Order == context.Message.Order)
+            x.CorrelateBy((instance, context) => instance.OrderId == context.Message.Order.Id)
              .SelectId(_ => NewId.NextGuid()));
 
         Event(() => InventoryChecked, x =>
@@ -92,14 +93,28 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
             When(OrderCreated)
                 .Then(ctx =>
                 {
-                    ctx.Saga.Order = ctx.Message.Order;
+                    var order = ctx.Message.Order;
+                    ctx.Saga.OrderId = order.Id;
+                    ctx.Saga.CustomerName = order.CustomerName;
+                    ctx.Saga.OrderDate = order.OrderDate;
+                    ctx.Saga.TotalAmount = order.TotalAmount;
+                    ctx.Saga.Status = order.Status;
+                    ctx.Saga.OrderDetails = order.OrderDetails.Select(d => new SagaOrderDetail
+                    {
+                        OrderSagaStateCorrelationId = ctx.Saga.CorrelationId,
+                        ProductId = d.ProductId,
+                        OrderQty = d.OrderQty,
+                        UnitPrice = d.UnitPrice,
+                        Total = d.Total,
+                    }).ToList();
+
                     Serilog.Context.LogContext.PushProperty("CorrelationId", ctx.Saga.CorrelationId);
-                    Serilog.Context.LogContext.PushProperty("OrderId", ctx.Saga.Order.Id);
+                    Serilog.Context.LogContext.PushProperty("OrderId", ctx.Saga.OrderId);
                 })
                 .PublishAsync(ctx => ctx.Init<CheckInventory>(new CheckInventory
                 {
                     CorrelationId = ctx.Saga.CorrelationId,
-                    Order = ctx.Saga.Order,
+                    Order = ToOrderDto(ctx.Saga),
                 }))
                 .TransitionTo(CheckingInventory)
                 .Then(ctx => _logger.LogInformation("OrderCreated -> CheckingInventory")));
@@ -114,12 +129,12 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                     ctx.Saga.FirstUnavailableAt = null;
                     ctx.Saga.InventoryRetryCount = 0;
                     Serilog.Context.LogContext.PushProperty("CorrelationId", ctx.Saga.CorrelationId);
-                    Serilog.Context.LogContext.PushProperty("OrderId", ctx.Saga.Order.Id);
+                    Serilog.Context.LogContext.PushProperty("OrderId", ctx.Saga.OrderId);
                 })
                 .PublishAsync(ctx => ctx.Init<ProcessPayment>(new ProcessPayment
                 {
                     CorrelationId = ctx.Saga.CorrelationId,
-                    Order = ctx.Saga.Order,
+                    Order = ToOrderDto(ctx.Saga),
                 }))
                 .TransitionTo(ProcessingPayment)
                 .Then(ctx => _logger.LogInformation("InventoryChecked (available) -> ProcessingPayment")),
@@ -140,7 +155,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                             .TransitionTo(Failed)
                             .Then(ctx => _logger.LogWarning(
                                 "Order {OrderId} [{CorrelationId}]: Inventory unavailable for {RetryWindow}. Transitioning to Failed.",
-                                ctx.Saga.Order.Id,
+                                ctx.Saga.OrderId,
                                 ctx.Saga.CorrelationId,
                                 MaxRetryWindow)),
 
@@ -162,12 +177,12 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                                 ctx => ctx.Init<CheckInventory>(new CheckInventory
                                 {
                                     CorrelationId = ctx.Saga.CorrelationId,
-                                    Order = ctx.Saga.Order,
+                                    Order = ToOrderDto(ctx.Saga),
                                 }),
                                 ctx => ctx.Saga.NextInventoryRetryAt!.Value - DateTime.UtcNow)
                             .Then(ctx => _logger.LogInformation(
                                 "Order {OrderId} [{CorrelationId}]: Inventory unavailable. Retry #{RetryCount} scheduled for {NextRetry}.",
-                                ctx.Saga.Order.Id,
+                                ctx.Saga.OrderId,
                                 ctx.Saga.CorrelationId,
                                 ctx.Saga.InventoryRetryCount,
                                 ctx.Saga.NextInventoryRetryAt))),
@@ -180,11 +195,11 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
             When(InventoryRetry.Received)
                 .Then(ctx => _logger.LogInformation(
                     "Order {OrderId} [{CorrelationId}]: InventoryRetry fired, re-checking inventory",
-                    ctx.Saga.Order.Id, ctx.Saga.CorrelationId))
+                    ctx.Saga.OrderId, ctx.Saga.CorrelationId))
                 .PublishAsync(ctx => ctx.Init<CheckInventory>(new CheckInventory
                 {
                     CorrelationId = ctx.Saga.CorrelationId,
-                    Order = ctx.Saga.Order,
+                    Order = ToOrderDto(ctx.Saga),
                 })),
 
             // A PaymentProcessed reply shouldn't be possible here (ProcessPayment isn't
@@ -199,19 +214,19 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                 .PublishAsync(ctx => ctx.Init<OrderConfirmed>(new OrderConfirmed
                 {
                     CorrelationId = ctx.Saga.CorrelationId,
-                    Order = ctx.Saga.Order,
+                    Order = ToOrderDto(ctx.Saga),
                 }))
                 .TransitionTo(Confirmed)
                 .Then(ctx => _logger.LogInformation(
                     "Order {OrderId} [{CorrelationId}]: PaymentProcessed (success) -> Confirmed",
-                    ctx.Saga.Order.Id, ctx.Saga.CorrelationId))
+                    ctx.Saga.OrderId, ctx.Saga.CorrelationId))
                 .Finalize(),
 
             When(PaymentProcessed, x => !x.Message.IsSuccess)
                 .TransitionTo(Failed)
                 .Then(ctx => _logger.LogWarning(
                     "Order {OrderId} [{CorrelationId}]: PaymentProcessed (declined) -> Failed",
-                    ctx.Saga.Order.Id, ctx.Saga.CorrelationId)),
+                    ctx.Saga.OrderId, ctx.Saga.CorrelationId)),
 
             // Mirrors the CheckingInventory guard: a late/duplicate InventoryChecked or a
             // stale InventoryRetry firing after payment has already started shouldn't crash
@@ -261,4 +276,22 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
         return saga.FirstUnavailableAt.HasValue &&
                DateTime.UtcNow - saga.FirstUnavailableAt.Value >= MaxRetryWindow;
     }
+
+    private static OrderDto ToOrderDto(OrderSagaState saga) => new()
+    {
+        Id = saga.OrderId,
+        CustomerName = saga.CustomerName,
+        OrderDate = saga.OrderDate,
+        TotalAmount = saga.TotalAmount,
+        Status = saga.Status,
+        OrderDetails = saga.OrderDetails.Select(d => new OrderDetailDto
+        {
+            Id = d.Id,
+            OrderId = saga.OrderId,
+            ProductId = d.ProductId,
+            OrderQty = d.OrderQty,
+            UnitPrice = d.UnitPrice,
+            Total = d.Total,
+        }).ToList(),
+    };
 }

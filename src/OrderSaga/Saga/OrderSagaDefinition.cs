@@ -1,6 +1,7 @@
 ﻿using Application.Messaging.Events;
 using Infrastructure.Persistence;
 using MassTransit;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -21,7 +22,7 @@ namespace OrderSaga.Saga
 
             // In-process concurrency: how many messages MassTransit processes simultaneously.
             // Lower than the other 3 services (64) — this endpoint repeatedly mutates shared
-            // per-order saga state (Mongo optimistic-concurrency writes), so fewer concurrent
+            // per-order saga state (SQL Server optimistic-concurrency writes), so fewer concurrent
             // touches means less contention to retry through under heavy load.
             endpointConfigurator.ConcurrentMessageLimit = 16;
 
@@ -41,13 +42,13 @@ namespace OrderSaga.Saga
                     intervalDelta: TimeSpan.FromSeconds(5));
             });
 
-            // Outer policy — runs before the one above: Mongo optimistic-concurrency
-            // conflicts (two messages racing to update the same saga doc) are expected
+            // Outer policy — runs before the one above: EF Core optimistic-concurrency
+            // conflicts (two messages racing to update the same saga row) are expected
             // under load and resolve almost instantly, so intercept and retry fast here
             // instead of falling into the slower exponential policy.
             endpointConfigurator.UseMessageRetry(r =>
             {
-                r.Handle<MongoDbConcurrencyException>();
+                r.Handle<DbUpdateConcurrencyException>();
                 r.Interval(10, TimeSpan.FromMilliseconds(100));
             });
 
