@@ -129,12 +129,9 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                         : new SagaOrderNotification
                         {
                             OrderSagaStateCorrelationId = ctx.Saga.CorrelationId,
-                            OrderId = order.Id,
-
                             NotifyToEmail = notification.NotifyToEmail,
                             NotifyToSMS = notification.NotifyToSMS,
                             NotifyToPaci = notification.NotifyToPaci,
-
                             // Initial completion state
                             EmailSendStatus = notification.EmailSendStatus,
                             SMSSendStatus = notification.SMSSendStatus,
