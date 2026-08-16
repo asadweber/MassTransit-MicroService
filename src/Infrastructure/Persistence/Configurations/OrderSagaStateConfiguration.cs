@@ -32,10 +32,12 @@ public class OrderSagaStateConfiguration : IEntityTypeConfiguration<OrderSagaSta
         });
         // One-to-one relationship
         builder.HasOne(x => x.OrderNotification)
-            .WithOne(x => x.OrderSagaState)
-            .HasForeignKey<SagaOrderNotification>(
-                x => x.OrderSagaStateCorrelationId)
-            .OnDelete(DeleteBehavior.Cascade);
+             .WithOne(x => x.OrderSagaState)
+             .HasForeignKey<SagaOrderNotification>(
+                 x => x.OrderSagaStateCorrelationId)
+             .HasPrincipalKey<OrderSagaState>(
+                 x => x.CorrelationId)
+             .OnDelete(DeleteBehavior.Cascade);
 
 
     }

@@ -11,6 +11,7 @@ public class OrderRepository(AppDbContext context)
     public async Task<Order?> GetByIdWithDetailsAsync(long id)
     {
         return await Set
+            .Include(o=>o.OrderNotification)
             .Include(o => o.OrderDetails)
                 .ThenInclude(d => d.Product)
             .FirstOrDefaultAsync(o => o.Id == id);
@@ -19,6 +20,7 @@ public class OrderRepository(AppDbContext context)
     public async Task<IReadOnlyList<Order>> GetAllWithDetailsAsync()
     {
         return await Set
+            .Include(o => o.OrderNotification)
             .Include(o => o.OrderDetails)
                 .ThenInclude(d => d.Product)
             .ToListAsync();
