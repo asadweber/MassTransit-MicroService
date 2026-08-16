@@ -9,4 +9,5 @@ public class Order
     public string Status { get; set; } = "Pending";
 
     public ICollection<OrderDetail> OrderDetails { get; set; } = [];
+    public OrderNotification? OrderNotification { get; set; }
 }
