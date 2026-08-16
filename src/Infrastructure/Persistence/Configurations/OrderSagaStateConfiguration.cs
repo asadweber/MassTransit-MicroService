@@ -1,0 +1,30 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Infrastructure.Persistence;
+
+namespace Infrastructure.Persistence.Configurations;
+
+public class OrderSagaStateConfiguration : IEntityTypeConfiguration<OrderSagaState>
+{
+    public void Configure(EntityTypeBuilder<OrderSagaState> builder)
+    {
+        builder.ToTable("OrderSagaStates");
+
+        builder.HasKey(s => s.CorrelationId);
+
+        builder.Property(s => s.Version).IsConcurrencyToken();
+
+        builder.Property(s => s.CustomerName).HasMaxLength(200);
+        builder.Property(s => s.TotalAmount).HasPrecision(18, 2);
+        builder.Property(s => s.Status).HasMaxLength(50);
+
+        builder.OwnsMany(s => s.OrderDetails, detail =>
+        {
+            detail.ToTable("SagaOrderDetails");
+            detail.WithOwner().HasForeignKey(d => d.OrderSagaStateCorrelationId);
+            detail.HasKey(d => d.Id);
+            detail.Property(d => d.UnitPrice).HasPrecision(18, 2);
+            detail.Property(d => d.Total).HasPrecision(18, 2);
+        });
+    }
+}

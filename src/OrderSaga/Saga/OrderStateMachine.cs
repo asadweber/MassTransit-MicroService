@@ -1,6 +1,7 @@
 using Application.Dtos;
 using Application.Messaging.Command;
 using Application.Messaging.Events;
+using Infrastructure.Persistence;
 using MassTransit;
 
 namespace OrderSaga.Saga;

@@ -1,4 +1,4 @@
-namespace OrderSaga.Saga;
+namespace Infrastructure.Persistence;
 
 public class SagaOrderDetail
 {

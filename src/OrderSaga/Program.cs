@@ -1,5 +1,6 @@
 using Application;
 using Infrastructure;
+using Infrastructure.Persistence;
 using MassTransit;
 using MongoDB.Driver;
 using OrderSaga.Saga;
