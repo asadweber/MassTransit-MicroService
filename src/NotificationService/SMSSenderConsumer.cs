@@ -23,7 +23,7 @@ public class SMSSenderConsumer(
             return;
 
         // TODO: send SMS for real — stubbed as sent for now.
-        notification.SMSResult = "Sent";
+        notification.SMSSendStatus = true;
         await uow.OrderNotifications.Update(notification);
         await uow.SaveChangesAsync();
 

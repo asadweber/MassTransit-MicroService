@@ -23,7 +23,7 @@ public class EmailSenderConsumer(
             return;
 
         // TODO: send email for real — stubbed as sent for now.
-        notification.EmailResult = "Sent";
+        notification.EmailSendStatus = true;
         await uow.OrderNotifications.Update(notification);
         await uow.SaveChangesAsync();
 

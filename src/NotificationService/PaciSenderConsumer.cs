@@ -23,7 +23,7 @@ public class PaciSenderConsumer(
             return;
 
         // TODO: send PACI notification for real — stubbed as sent for now.
-        notification.PaciResult = "Sent";
+        notification.PaciSendStatus = true;
         await uow.OrderNotifications.Update(notification);
         await uow.SaveChangesAsync();
 

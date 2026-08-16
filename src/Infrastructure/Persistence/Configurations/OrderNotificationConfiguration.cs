@@ -8,9 +8,9 @@ public class OrderNotificationConfiguration : IEntityTypeConfiguration<OrderNoti
 {
     public void Configure(EntityTypeBuilder<OrderNotification> builder)
     {
-        builder.Property(n => n.EmailResult).HasMaxLength(1000);
-        builder.Property(n => n.SMSResult).HasMaxLength(1000);
-        builder.Property(n => n.PaciResult).HasMaxLength(1000);
+        builder.Property(n => n.EmailSendStatus).HasMaxLength(1000);
+        builder.Property(n => n.SMSSendStatus).HasMaxLength(1000);
+        builder.Property(n => n.PaciSendStatus).HasMaxLength(1000);
 
         builder.HasIndex(n => n.OrderId).IsUnique();
 
