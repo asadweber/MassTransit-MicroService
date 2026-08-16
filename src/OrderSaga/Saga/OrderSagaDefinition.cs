@@ -1,4 +1,5 @@
 ﻿using Application.Messaging.Events;
+using Infrastructure;
 using Infrastructure.Persistence;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
@@ -8,7 +9,7 @@ using System.Text;
 
 namespace OrderSaga.Saga
 {
-    public class OrderSagaDefinition : SagaDefinition<OrderSagaState>
+    public class OrderSagaDefinition(RabbitMqOptions rabbitMqOptions) : SagaDefinition<OrderSagaState>
     {
         protected override void ConfigureSaga(
             IReceiveEndpointConfigurator endpointConfigurator,
@@ -18,13 +19,13 @@ namespace OrderSaga.Saga
 
             // Broker-level buffer: how many unacked messages RabbitMQ will push at once.
             // Kept at 2x ConcurrentMessageLimit, same ratio as the other 3 services.
-            endpointConfigurator.PrefetchCount = 32;
+            endpointConfigurator.PrefetchCount = rabbitMqOptions.PrefetchCount;
 
             // In-process concurrency: how many messages MassTransit processes simultaneously.
             // Lower than the other 3 services (64) — this endpoint repeatedly mutates shared
             // per-order saga state (SQL Server optimistic-concurrency writes), so fewer concurrent
             // touches means less contention to retry through under heavy load.
-            endpointConfigurator.ConcurrentMessageLimit = 16;
+            endpointConfigurator.ConcurrentMessageLimit = rabbitMqOptions.ConcurrentMessageLimit;
 
             
             if (endpointConfigurator is IRabbitMqReceiveEndpointConfigurator rabbitMqEndpointConfigurator)
