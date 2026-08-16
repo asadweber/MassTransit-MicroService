@@ -9,6 +9,9 @@ using PaymentService;
 using Serilog;
 
 var builder = Host.CreateApplicationBuilder(args);
+builder.Configuration.AddJsonFile(
+    Path.Combine(AppContext.BaseDirectory, "appsettings.json"),
+    optional: false, reloadOnChange: true);
 
 // Serilog config lives entirely in appsettings.json ("Serilog" section).
 builder.Services.AddSerilog(cfg => cfg.ReadFrom.Configuration(builder.Configuration));

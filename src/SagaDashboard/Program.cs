@@ -10,6 +10,9 @@ using SagaDashboard;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Configuration.AddJsonFile(
+    Path.Combine(AppContext.BaseDirectory, "appsettings.json"),
+    optional: false, reloadOnChange: true);
 
 // Serilog config lives entirely in appsettings.json ("Serilog" section).
 //builder.Services.AddSerilog(cfg => cfg.ReadFrom.Configuration(builder.Configuration));

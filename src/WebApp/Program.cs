@@ -7,6 +7,9 @@ using WebApp.Services;
 using WebApp.Swagger;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Configuration.AddJsonFile(
+    Path.Combine(AppContext.BaseDirectory, "appsettings.json"),
+    optional: false, reloadOnChange: true);
 
 
 // Serilog config lives entirely in appsettings.json ("Serilog" section).
