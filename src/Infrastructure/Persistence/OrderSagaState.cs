@@ -1,3 +1,4 @@
+using Domain.Entities;
 using MassTransit;
 
 namespace Infrastructure.Persistence;
@@ -17,6 +18,9 @@ public class OrderSagaState : SagaStateMachineInstance, ISagaVersion
     public string Status { get; set; } = "Pending";
 
     public List<SagaOrderDetail> OrderDetails { get; set; } = [];
+
+    public SagaOrderNotification? OrderNotification { get; set; }
+
 
     public DateTime? FirstUnavailableAt { get; set; }
     public DateTime? NextInventoryRetryAt { get; set; }
