@@ -158,7 +158,8 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                                 "Order {OrderId} [{CorrelationId}]: Inventory unavailable for {RetryWindow}. Transitioning to Failed.",
                                 ctx.Saga.OrderId,
                                 ctx.Saga.CorrelationId,
-                                MaxRetryWindow)),
+                                MaxRetryWindow))
+                             .Finalize(),
 
                         // Schedule another inventory check.
                         retry => retry
