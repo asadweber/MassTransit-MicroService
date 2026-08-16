@@ -29,7 +29,7 @@ builder.Services.AddMassTransit(x =>
 
     x.UsingRabbitMq((ctx, cfg) =>
     {
-        var rmq = builder.Configuration.GetSection("RabbitMQ").Get<RabbitMqOptions>()!;
+        var rmq = ctx.GetRequiredService<RabbitMqOptions>();
         cfg.Host(rmq.Host, rmq.VirtualHost, h =>
         {
             h.Username(rmq.Username);
