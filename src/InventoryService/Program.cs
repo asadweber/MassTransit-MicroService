@@ -29,11 +29,11 @@ builder.Services.AddMassTransit(x =>
 
     x.UsingRabbitMq((ctx, cfg) =>
     {
-        var rmq = builder.Configuration.GetSection("RabbitMQ");
-        cfg.Host(rmq["Host"], rmq["VirtualHost"], h =>
+        var rmq = builder.Configuration.GetSection("RabbitMQ").Get<RabbitMqOptions>()!;
+        cfg.Host(rmq.Host, rmq.VirtualHost, h =>
         {
-            h.Username(rmq["Username"]!);
-            h.Password(rmq["Password"]!);
+            h.Username(rmq.Username);
+            h.Password(rmq.Password);
         });
 
         // Use Newtonsoft (not default System.Text.Json) for message (de)serialization.
@@ -49,8 +49,8 @@ builder.Services.AddMassTransit(x =>
         {
             e.Durable = true;               // queue survives broker restart
             e.AutoDelete = false;           // keep queue when no consumers connected
-            e.PrefetchCount = 32;           // messages fetched per consumer before ack
-            e.ConcurrentMessageLimit = 16;  // max messages processed in parallel
+            e.PrefetchCount = rmq.PrefetchCount;                 // messages fetched per consumer before ack
+            e.ConcurrentMessageLimit = rmq.ConcurrentMessageLimit; // max messages processed in parallel
 
             // Caps consumer throughput at 400 messages/sec for this endpoint.
             e.UseRateLimit(400, TimeSpan.FromSeconds(1));
@@ -108,7 +108,7 @@ builder.Services.AddMassTransit(x =>
             // AdjustStock) that can mutate the same inventory row, add a partitioner
             // for each of those types too — otherwise those messages get zero
             // serialization protection against concurrent mutation of the same item.
-            var partitioner = e.CreatePartitioner(e.ConcurrentMessageLimit ?? 16);
+            var partitioner = e.CreatePartitioner(e.ConcurrentMessageLimit!.Value);
             e.UsePartitioner<CheckInventory>(partitioner, m => m.Message.CorrelationId);
 
             // Consumer — always configured last, innermost in the pipeline.

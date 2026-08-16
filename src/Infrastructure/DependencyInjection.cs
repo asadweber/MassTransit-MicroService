@@ -28,6 +28,10 @@ public static class DependencyInjection
             provider.GetRequiredService<IMongoClient>()
                     .GetDatabase(mongoSettings.DatabaseName));
 
+        // RabbitMQ
+        var rabbitMqSettings = configuration.GetSection("RabbitMQ").Get<RabbitMqOptions>()!;
+        services.AddSingleton(rabbitMqSettings);
+
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IOrderRepository, OrderRepository>();

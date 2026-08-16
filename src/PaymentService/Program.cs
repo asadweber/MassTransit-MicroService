@@ -25,11 +25,11 @@ builder.Services.AddMassTransit(x =>
 
     x.UsingRabbitMq((ctx, cfg) =>
     {
-        var rmq = builder.Configuration.GetSection("RabbitMQ");
-        cfg.Host(rmq["Host"], rmq["VirtualHost"], h =>
+        var rmq = builder.Configuration.GetSection("RabbitMQ").Get<RabbitMqOptions>()!;
+        cfg.Host(rmq.Host, rmq.VirtualHost, h =>
         {
-            h.Username(rmq["Username"]!);
-            h.Password(rmq["Password"]!);
+            h.Username(rmq.Username);
+            h.Password(rmq.Password);
         });
 
         cfg.UseNewtonsoftJsonSerializer();
@@ -44,8 +44,8 @@ builder.Services.AddMassTransit(x =>
         {
             e.Durable = true;
             e.AutoDelete = false;
-            e.PrefetchCount = 32;
-            e.ConcurrentMessageLimit = 16;
+            e.PrefetchCount = rmq.PrefetchCount;
+            e.ConcurrentMessageLimit = rmq.ConcurrentMessageLimit;
 
             // Caps consumer throughput at 400 messages/sec for this endpoint.
             e.UseRateLimit(400, TimeSpan.FromSeconds(1));

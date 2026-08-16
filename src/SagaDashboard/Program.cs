@@ -38,12 +38,12 @@ builder.Services.AddMassTransit(x =>
 
     x.UsingRabbitMq((ctx, cfg) =>
     {
-        var rmq = builder.Configuration.GetSection("RabbitMQ");
+        var rmq = builder.Configuration.GetSection("RabbitMQ").Get<RabbitMqOptions>()!;
 
-        cfg.Host(rmq["Host"], rmq["VirtualHost"], h =>
+        cfg.Host(rmq.Host, rmq.VirtualHost, h =>
         {
-            h.Username(rmq["Username"]!);
-            h.Password(rmq["Password"]!);
+            h.Username(rmq.Username);
+            h.Password(rmq.Password);
         });
 
         cfg.UseNewtonsoftJsonSerializer();
