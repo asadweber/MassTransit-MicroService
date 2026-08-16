@@ -47,16 +47,11 @@ builder.Services.AddMassTransit(x =>
             e.PrefetchCount = 32;
             e.ConcurrentMessageLimit = 16;
 
-            // Caps consumer throughput at 100 messages/sec for this endpoint.
+            // Caps consumer throughput at 400 messages/sec for this endpoint.
             e.UseRateLimit(400, TimeSpan.FromSeconds(1));
 
-            e.UseMessageRetry(r =>
-            {
-                r.Handle<DbUpdateConcurrencyException>();
-                r.Interval(10, TimeSpan.FromMilliseconds(100));
-            });
-
-            // Fast retries for transient failures (5 attempts, 1s-1m exponential backoff).
+            // Outer policy — added first, so it wraps everything below: exponential
+            // retry for real faults that survive the inner concurrency-specific retry.
             e.UseMessageRetry(r =>
             {
                 r.Exponential(
@@ -64,6 +59,16 @@ builder.Services.AddMassTransit(x =>
                     minInterval: TimeSpan.FromSeconds(1),
                     maxInterval: TimeSpan.FromMinutes(1),
                     intervalDelta: TimeSpan.FromSeconds(5));
+            });
+
+            // Inner policy — added second, so it runs closer to the consumer (before the
+            // outer exponential policy sees the exception): EF Core optimistic-concurrency
+            // conflicts are expected under load and resolve almost instantly, so intercept
+            // and retry fast here instead of falling into the slower exponential policy.
+            e.UseMessageRetry(r =>
+            {
+                r.Handle<DbUpdateConcurrencyException>();
+                r.Interval(10, TimeSpan.FromMilliseconds(100));
             });
 
             // Trips after sustained failure (15% of a rolling 1-min window, min 10 attempts
@@ -92,7 +97,7 @@ builder.Services.AddMassTransit(x =>
             });
             // Keeps messages for the same order (CorrelationId) processed in order,
             // even though ConcurrentMessageLimit allows 16 messages in parallel.
-            var partitioner = e.CreatePartitioner(e.ConcurrentMessageLimit ?? 8);
+            var partitioner = e.CreatePartitioner(e.ConcurrentMessageLimit!.Value);
             e.UsePartitioner<ProcessPayment>(partitioner, m => m.Message.CorrelationId);
 
 
