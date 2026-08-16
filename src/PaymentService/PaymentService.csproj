@@ -8,6 +8,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Content Include="..\..\appsettings.json" Link="appsettings.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
 	  <PackageReference Include="MassTransit" Version="9.2.0-develop.150" />
 	  <PackageReference Include="MassTransit.EntityFrameworkCore" Version="9.2.0-develop.150" />
 	  <PackageReference Include="MassTransit.Newtonsoft" Version="9.2.0-develop.150" />
