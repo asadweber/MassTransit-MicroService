@@ -20,7 +20,7 @@ public class OrderService(IUnitOfWork uow, IPublishEndpoint bus, IMapper mapper)
         return mapper.Map<List<OrderDto>>(orders);
     }
 
-    public async Task<OrderDto?> GetByIdAsync(int id)
+    public async Task<OrderDto?> GetByIdAsync(long id)
     {
         var order = await uow.Orders.GetByIdWithDetailsAsync(id);
         return order is null ? null : mapper.Map<OrderDto>(order);
@@ -51,7 +51,7 @@ public class OrderService(IUnitOfWork uow, IPublishEndpoint bus, IMapper mapper)
     }
 
 
-    public async Task<bool> UpdateAsync(int id, OrderDto request)
+    public async Task<bool> UpdateAsync(long id, OrderDto request)
     {
         if (id != request.Id) return false;
 
@@ -76,7 +76,7 @@ public class OrderService(IUnitOfWork uow, IPublishEndpoint bus, IMapper mapper)
         return true;
     }
 
-    public async Task<bool> DeleteAsync(int id)
+    public async Task<bool> DeleteAsync(long id)
     {
         var order = await uow.Orders.GetByIdAsync(id);
         if (order is null) return false;

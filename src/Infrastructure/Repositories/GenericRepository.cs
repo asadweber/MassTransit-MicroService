@@ -10,7 +10,7 @@ public class GenericRepository<T>(AppDbContext context) : IGenericRepository<T> 
     protected readonly AppDbContext Context = context;
     protected readonly DbSet<T> Set = context.Set<T>();
 
-    public async Task<T?> GetByIdAsync(int id)
+    public async Task<T?> GetByIdAsync(long id)
     {
         return await Set.FindAsync(id);
     }

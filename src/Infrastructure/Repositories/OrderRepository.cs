@@ -8,7 +8,7 @@ namespace Infrastructure.Repositories;
 public class OrderRepository(AppDbContext context)
     : GenericRepository<Order>(context), IOrderRepository
 {
-    public async Task<Order?> GetByIdWithDetailsAsync(int id)
+    public async Task<Order?> GetByIdWithDetailsAsync(long id)
     {
         return await Set
             .Include(o => o.OrderDetails)

@@ -1,4 +1,5 @@
 using Application.Dtos;
+using Domain.Entities;
 using Swashbuckle.AspNetCore.Filters;
 
 namespace WebApp.Swagger;
@@ -9,6 +10,10 @@ public class OrderDtoExample : IExamplesProvider<OrderDto>
     {
         CustomerName = "John Doe",
         Status = "Pending",
+        OrderNotification = new OrderNotificationDto
+        {
+            NotifyToSMS = true,NotifyToPaci= true,NotifyToEmail = true,            
+        },   
         OrderDetails =
         [
             new OrderDetailDto

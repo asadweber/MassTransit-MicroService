@@ -1,12 +1,10 @@
-namespace Domain.Entities;
+namespace Application.Dtos;
 
 public class OrderNotificationDto
 {
     public long Id { get; set; }
 
     public long OrderId { get; set; }
-    public Order Order { get; set; } = null!;
-
     public bool NotifyToEmail { get; set; }
     public bool NotifyToSMS { get; set; }
     public bool NotifyToPaci { get; set; }

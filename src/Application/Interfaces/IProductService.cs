@@ -4,9 +4,9 @@ namespace Application.Interfaces;
 
 public interface IProductService
 {
-    Task<bool> HasSufficientStockAsync(int productId, int qty);
+    Task<bool> HasSufficientStockAsync(long productId, long qty);
 
-    Task<bool> ReduceStockQtyAsync(int productId, int qty);
+    Task<bool> ReduceStockQtyAsync(long productId, long qty);
 
     Task<List<ProductDto>> GetAllAsync();
 }
