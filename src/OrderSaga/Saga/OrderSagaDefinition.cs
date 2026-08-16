@@ -32,7 +32,8 @@ namespace OrderSaga.Saga
                 rabbitMqEndpointConfigurator.Durable = true;
                 rabbitMqEndpointConfigurator.AutoDelete = false;
             }
-            // Inner policy — runs first: exponential retry for real faults.
+            // Outer policy — added first, so it wraps everything below: exponential
+            // retry for real faults that survive the inner concurrency-specific retry.
             endpointConfigurator.UseMessageRetry(r =>
             {
                 r.Exponential(
@@ -42,7 +43,8 @@ namespace OrderSaga.Saga
                     intervalDelta: TimeSpan.FromSeconds(5));
             });
 
-            // Outer policy — runs before the one above: EF Core optimistic-concurrency
+            // Inner policy — added second, so it runs closer to the consumer (before the
+            // outer exponential policy sees the exception): EF Core optimistic-concurrency
             // conflicts (two messages racing to update the same saga row) are expected
             // under load and resolve almost instantly, so intercept and retry fast here
             // instead of falling into the slower exponential policy.
@@ -83,7 +85,7 @@ namespace OrderSaga.Saga
             // so OrderCreated can key on Order.Id (no CorrelationId exists yet at that point)
             // while the later events key on the saga's own CorrelationId.
             var partitioner =
-                endpointConfigurator.CreatePartitioner(endpointConfigurator.ConcurrentMessageLimit ?? 16);
+                endpointConfigurator.CreatePartitioner(endpointConfigurator.ConcurrentMessageLimit!.Value);
             
             sagaConfigurator.Message<OrderCreated>(x =>
             {
