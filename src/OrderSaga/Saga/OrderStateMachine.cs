@@ -332,7 +332,6 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
             NotifyToEmail = saga.OrderNotification.NotifyToEmail,
             NotifyToSMS = saga.OrderNotification.NotifyToSMS,
             NotifyToPaci = saga.OrderNotification.NotifyToPaci,
-
             EmailSendStatus = saga.OrderNotification.EmailSendStatus,
             SMSSendStatus = saga.OrderNotification.SMSSendStatus,
             PaciSendStatus = saga.OrderNotification.PaciSendStatus

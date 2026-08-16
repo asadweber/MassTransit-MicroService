@@ -5,6 +5,7 @@ namespace Application.Dtos;
 public class OrderNotificationDto
 {
     public long Id { get; set; }
+    public long OrderId { get; set; }
 
     public bool NotifyToEmail { get; set; }
     public bool NotifyToSMS { get; set; }
@@ -15,5 +16,4 @@ public class OrderNotificationDto
     public bool PaciSendStatus { get; set; } = false;
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public long OrderId { get; set; }
 }
