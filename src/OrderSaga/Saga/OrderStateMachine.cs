@@ -528,8 +528,8 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
 
                 .Then(ctx =>
                 {
-                    var notification =
-                        ctx.Saga.OrderNotification;
+
+                    var notification = ctx.Message.Order.OrderNotification;
 
                     if (notification == null)
                     {
@@ -548,20 +548,30 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                     switch (ctx.Message.Process)
                     {
                         case OrderConfirmationProcess.Email:
-                            notification.EmailSendStatus = true;
-                            break;
-
+                            {
+                                ctx.Saga.Status = "Email Notification";
+                                ctx.Saga.OrderNotification.EmailSendStatus = notification.EmailSendStatus;
+                                break;
+                            }
                         case OrderConfirmationProcess.SMS:
-                            notification.SMSSendStatus = true;
-                            break;
-
+                            {
+                                ctx.Saga.Status = "SMS Notification";
+                                ctx.Saga.OrderNotification.SMSSendStatus = notification.SMSSendStatus;
+                                break;
+                            }
                         case OrderConfirmationProcess.Paci:
-                            notification.PaciSendStatus = true;
-                            break;
+                            {
+                                ctx.Saga.Status = "Paci Notification";
+                                ctx.Saga.OrderNotification.PaciSendStatus = notification.PaciSendStatus;
+                                break;
+                            }
 
                         case OrderConfirmationProcess.Notification:
-                            notification.NotificationSendStatus = true;
-                            break;
+                            {
+                                ctx.Saga.Status = "Notification";
+                                ctx.Saga.OrderNotification.NotificationSendStatus = notification.NotificationSendStatus;
+                                break;
+                            }
                     }
 
                     _logger.LogInformation(
