@@ -9,7 +9,8 @@ using Microsoft.Extensions.Logging;
 namespace PaymentService;
 
 [ExcludeFromConfigureEndpoints]
-public class PaymentConsumer(ILogger<PaymentConsumer> logger, IOrderService orderService, IProductService productService) : IConsumer<ProcessPayment>
+public class PaymentConsumer(ILogger<PaymentConsumer> logger, IOrderService orderService, IProductService productService) : 
+    IConsumer<ProcessPayment>
 {
     public async Task Consume(ConsumeContext<ProcessPayment> context)
     {

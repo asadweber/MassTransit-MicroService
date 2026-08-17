@@ -30,14 +30,15 @@ public class OrderSagaStateConfiguration : IEntityTypeConfiguration<OrderSagaSta
             detail.Property(d => d.UnitPrice).HasPrecision(18, 2);
             detail.Property(d => d.Total).HasPrecision(18, 2);
         });
-        // One-to-one relationship. CorrelationId is already the primary key (HasKey above),
-        // so EF uses it as the principal key by default — no need for an explicit HasPrincipalKey.
-        builder.HasOne(x => x.OrderNotification)
-             .WithOne()
-             .HasForeignKey<SagaOrderNotification>(
-                 x => x.OrderSagaStateCorrelationId)
-             .OnDelete(DeleteBehavior.Cascade);
-
-
+        // Owned (not a plain HasOne/WithOne) so EF auto-includes it on every OrderSagaState
+        // load, same as OrderDetails above — MassTransit's EntityFrameworkRepository reloads
+        // the saga with no explicit .Include chain, and a regular navigation would come back
+        // null on every event after the first in-memory OrderCreated assignment.
+        builder.OwnsOne(s => s.OrderNotification, notification =>
+        {
+            notification.ToTable("SagaOrderNotifications");
+            notification.WithOwner().HasForeignKey(n => n.OrderSagaStateCorrelationId);
+            notification.HasKey(n => n.Id);
+        });
     }
 }
