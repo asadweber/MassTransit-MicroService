@@ -552,7 +552,9 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                 .If(
                     ctx => IsNotificationFanOutComplete(ctx.Saga),
                     both => both
-                        .Then(ctx => ctx.Saga.Status = "Completed")
+                        .Then(ctx => {
+                            ctx.Saga.Status = "Completed"; 
+                        })
                         .Finalize()),
 
             // Late / duplicate messages
