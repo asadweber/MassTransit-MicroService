@@ -15,10 +15,8 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddDbContext<AppDbContext>((provider, options) =>
-            options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"), sql =>
-                       sql.CommandTimeout(60)
-                          .EnableRetryOnFailure(maxRetryCount: 5, maxRetryDelay: TimeSpan.FromSeconds(10), errorNumbersToAdd: null))
-                   .UseApplicationServiceProvider(provider));
+           options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"))
+                  .UseApplicationServiceProvider(provider));
 
 
         // MongoDB
