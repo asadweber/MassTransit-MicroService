@@ -41,13 +41,7 @@ builder.Services.AddMassTransit(x =>
         .EntityFrameworkRepository(r =>
         {
             r.ExistingDbContext<AppDbContext>();
-
-            // Pessimistic: SELECT ... WITH (UPDLOCK) serializes concurrent writers to the
-            // same saga row instead of racing optimistic UPDATEs. The 4 notification
-            // channels (Email/SMS/Paci/Notification) publish OrderConfirmedCompleted near-
-            // simultaneously for the same CorrelationId, and optimistic mode's SELECT-then-
-            // UPDATE was deadlocking (SQL error 1205) under that contention.
-            r.ConcurrencyMode = ConcurrencyMode.Pessimistic;
+            r.ConcurrencyMode = ConcurrencyMode.Optimistic;
         });
 
 
