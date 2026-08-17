@@ -75,7 +75,11 @@ namespace OrderSaga.Saga
                     sql.Number is 1204 or 1205 or 1222 or -2);
 
 
-                retry.Interval(10, TimeSpan.FromMilliseconds(100));
+                retry.Exponential(
+                        retryLimit: 5,
+                        minInterval: TimeSpan.FromMilliseconds(200),
+                        maxInterval: TimeSpan.FromSeconds(5),
+                        intervalDelta: TimeSpan.FromMilliseconds(200));
             });
 
             // Trips after sustained failure (15% of a rolling 1-min window, min 10 attempts
