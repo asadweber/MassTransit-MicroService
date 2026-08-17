@@ -517,7 +517,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                 .Then(ctx =>
                 {
                     ctx.Saga.OrderNotification.EmailSendStatus = true;
-
+                    ctx.Saga.Status = "Email Notification Complete";
                     _logger.LogInformation(
                         "Order {OrderId} [{CorrelationId}]: " +
                         "Email notification completed",
@@ -541,7 +541,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                 .Then(ctx =>
                 {
                     ctx.Saga.OrderNotification.SMSSendStatus = true;
-
+                    ctx.Saga.Status= "SMS Notification Completed";
                     _logger.LogInformation(
                         "Order {OrderId} [{CorrelationId}]: " +
                         "SMS notification completed",
