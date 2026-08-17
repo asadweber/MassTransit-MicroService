@@ -32,6 +32,7 @@ public class NotificationConsumer(
         await context.Publish(new OrderConfirmedCompleted
         {
             CorrelationId = msg.CorrelationId,
+            Order = msg.Order,
             Process = OrderConfirmationProcess.Notification
         });
 

@@ -44,12 +44,16 @@ public class PaciSenderConsumer(
             notification.PaciSendStatus = true;
             await uow.OrderNotifications.Update(notification);
             await uow.SaveChangesAsync();
+
+            message.Order.OrderNotification.PaciSendStatus = true;
+
         }
 
         // If processing succeeds, publish completion.
         await context.Publish(new OrderConfirmedCompleted
         {
             CorrelationId = message.CorrelationId,
+            Order = message.Order,
             Process = OrderConfirmationProcess.Paci
         });
 

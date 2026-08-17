@@ -44,12 +44,16 @@ public class SMSSenderConsumer(
             notification.SMSSendStatus = true;
             await uow.OrderNotifications.Update(notification);
             await uow.SaveChangesAsync();
+
+            message.Order.OrderNotification.SMSSendStatus = true;
+
         }
 
         // If processing succeeds, publish completion.
         await context.Publish(new OrderConfirmedCompleted
         {
             CorrelationId = message.CorrelationId,
+            Order = message.Order,
             Process = OrderConfirmationProcess.SMS
         });
 

@@ -44,12 +44,15 @@ public class EmailSenderConsumer(
             notification.EmailSendStatus = true;
             await uow.OrderNotifications.Update(notification);
             await uow.SaveChangesAsync();
+
+            message.Order.OrderNotification.EmailSendStatus=true;
         }
 
         // If processing succeeds, publish completion.
         await context.Publish(new OrderConfirmedCompleted
         {
             CorrelationId = message.CorrelationId,
+            Order = message.Order,
             Process = OrderConfirmationProcess.Email
         });
 
