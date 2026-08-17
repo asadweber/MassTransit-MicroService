@@ -381,8 +381,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                                 GetRetryDelay(
                                     ctx.Saga.InventoryRetryCount);
 
-                            ctx.Saga.NextInventoryRetryAt =
-                                DateTimeOffset.UtcNow + delay;
+                            ctx.Saga.NextInventoryRetryAt = DateTime.UtcNow + delay;
 
                             _logger.LogInformation(
                                 "Order {OrderId} [{CorrelationId}]: " +
