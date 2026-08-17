@@ -1,4 +1,5 @@
-﻿using Application.Messaging.Events;
+﻿using Application.Messaging.Command;
+using Application.Messaging.Events;
 using Infrastructure;
 using Infrastructure.Persistence;
 using MassTransit;
@@ -110,6 +111,16 @@ namespace OrderSaga.Saga
             });
 
             sagaConfigurator.Message<OrderConfirmedCompleted>(x =>
+            {
+                x.UsePartitioner(
+                    partitioner,
+                    context => context.Message.CorrelationId);
+            });
+
+            // InventoryRetry's scheduled fire is consumed as CheckInventory (its Schedule
+            // message type) — partition it too, or a retry firing can race an in-flight
+            // InventoryChecked reply for the same saga and hit avoidable EF concurrency conflicts.
+            sagaConfigurator.Message<CheckInventory>(x =>
             {
                 x.UsePartitioner(
                     partitioner,
