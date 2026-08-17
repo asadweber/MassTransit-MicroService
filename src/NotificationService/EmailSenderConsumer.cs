@@ -48,6 +48,8 @@ public class EmailSenderConsumer(
             message.Order.OrderNotification.EmailSendStatus=true;
         }
 
+        System.Threading.Thread.Sleep(1000); // Simulate email sending delay
+
         // If processing succeeds, publish completion.
         await context.Publish(new OrderConfirmedCompleted
         {

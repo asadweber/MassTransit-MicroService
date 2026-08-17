@@ -48,7 +48,7 @@ public class PaciSenderConsumer(
             message.Order.OrderNotification.PaciSendStatus = true;
 
         }
-
+        System.Threading.Thread.Sleep(1000); // Simulate email sending delay
         // If processing succeeds, publish completion.
         await context.Publish(new OrderConfirmedCompleted
         {
