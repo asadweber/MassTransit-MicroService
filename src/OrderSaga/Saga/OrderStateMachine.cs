@@ -138,7 +138,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
         ConfigureInitialState();
         ConfigureInventoryState();
         ConfigurePaymentState();
-        ConfigureConfirmedState();
+        ConfigurePaymentConfirmedState();
         ConfigureFailedState();
 
         // Finalized saga instances are removed from the repository.
@@ -492,13 +492,12 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
 
     #region Confirmed / Notification Fan-out
 
-    private void ConfigureConfirmedState()
+    private void ConfigurePaymentConfirmedState()
     {
         During(
             PaymentConfirmed,
 
             When(OrderConfirmedCompleted)
-
                 .Then(ctx =>
                 {
                     ctx.Saga.Status = "Completed";

@@ -42,10 +42,6 @@ public class NotificationConsumer(
             await uow.SaveChangesAsync();
         }
 
-
-        if (message.Order.OrderNotification is not null)
-            message.Order.OrderNotification.NotificationSendStatus = true;
-        
         //await Task.Delay(1000); // Simulate email sending delay
 
         await context.Publish(new OrderConfirmedCompleted
