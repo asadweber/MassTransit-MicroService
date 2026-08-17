@@ -16,9 +16,14 @@ namespace OrderSaga.Saga;
 ///     ↓
 /// ProcessingPayment
 ///     ↓
-/// Confirmed
-///     ↓
+/// PaymentConfirmed ──┬── Email notification
+///                    └── SMS notification
+///     ↓ (both channels done, or opted out)
 /// Finalize
+///
+/// Email and SMS notifications run in parallel from PaymentConfirmed.
+/// A channel counts as done if the customer never opted into it, or opted
+/// in and it completed. The saga finalizes once both channels are done.
 ///
 /// Failed business processes remain in the saga table for operational
 /// visibility and possible recovery. Successfully completed sagas are
