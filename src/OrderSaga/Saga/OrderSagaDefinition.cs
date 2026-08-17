@@ -52,11 +52,12 @@ namespace OrderSaga.Saga
             // when EF's save fails) are transient — two messages racing to update the same saga
             // row — and resolve almost instantly, so intercept and retry fast here instead of
             // falling into the slower exponential policy.
-            endpointConfigurator.UseMessageRetry(r =>
+            endpointConfigurator.UseMessageRetry(retry =>
             {
-                r.Handle<DbUpdateConcurrencyException>();
-                r.Handle<DbUpdateException>(ex => ex.InnerException is SqlException { Number: 1205 or 1204 or 1222 });
-                r.Interval(10, TimeSpan.FromMilliseconds(100));
+                retry.Handle<SqlException>(ex => ex.Number == 1205);
+                retry.Handle<DbUpdateConcurrencyException>();
+                retry.Handle<DbUpdateException>(ex => ex.InnerException is SqlException { Number: 1205 or 1204 or 1222 });
+                retry.Interval(10, TimeSpan.FromMilliseconds(100));
             });
 
             // Trips after sustained failure (15% of a rolling 1-min window, min 10 attempts
