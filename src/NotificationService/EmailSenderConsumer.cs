@@ -53,7 +53,7 @@ public class EmailSenderConsumer(
             message.Order.OrderNotification.EmailSendStatus = true;
 
 
-        await Task.Delay(1000); // Simulate email sending delay
+        //await Task.Delay(1000); // Simulate email sending delay
 
         // If processing succeeds, publish completion.
         await context.Publish(new OrderConfirmedCompleted

@@ -16,16 +16,9 @@ public class InventoryConsumer(ILogger<InventoryConsumer> logger, IOrderService 
 
         logger.LogInformation("Checking inventory");
 
-        //var order = await orderService.GetByIdAsync(msg.Order.Id);
         var isAvailable = true;
         foreach (var item in msg.Order.OrderDetails)
         {
-            //if (item.ProductId == 1)
-            //{
-            //    logger.LogWarning("Simulated failure, redelivery count {RedeliveryCount}", context.GetRedeliveryCount());
-            //    throw new HttpRequestException("Inventory service unavailable");
-            //}
-
             var hasSufficientStock = await productService.HasSufficientStockAsync(item.ProductId, item.OrderQty);
             if (!hasSufficientStock)
             {

@@ -46,7 +46,7 @@ public class NotificationConsumer(
         if (message.Order.OrderNotification is not null)
             message.Order.OrderNotification.NotificationSendStatus = true;
         
-        await Task.Delay(1000); // Simulate email sending delay
+        //await Task.Delay(1000); // Simulate email sending delay
 
         await context.Publish(new OrderConfirmedCompleted
         {
