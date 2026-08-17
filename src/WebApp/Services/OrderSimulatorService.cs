@@ -34,11 +34,26 @@ public class OrderSimulatorService(
 
         while (await timer.WaitForNextTickAsync(stoppingToken))
         {
+            // Loaded once per tick instead of once per order — avoids re-querying
+            // Products up to OrdersPerTick times per tick under higher simulator load.
+            List<Product> products;
+            await using (var scope = scopeFactory.CreateAsyncScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                products = await db.Products.AsNoTracking().ToListAsync(stoppingToken);
+            }
+
+            if (products.Count == 0)
+            {
+                logger.LogWarning("Simulator skipped tick — no products in database");
+                continue;
+            }
+
             var tasks = Enumerable.Range(0, ordersPerTick).Select(async _ =>
             {
                 try
                 {
-                    await PlaceOrderAsync(stoppingToken);
+                    await PlaceOrderAsync(products, stoppingToken);
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
@@ -50,19 +65,12 @@ public class OrderSimulatorService(
         }
     }
 
-    private async Task PlaceOrderAsync(CancellationToken ct)
+    private async Task PlaceOrderAsync(List<Product> products, CancellationToken ct)
     {
         await using var scope = scopeFactory.CreateAsyncScope();
         var db     = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var bus    = scope.ServiceProvider.GetRequiredService<IPublishEndpoint>();
         var mapper = scope.ServiceProvider.GetRequiredService<IMapper>();
-
-        var products = await db.Products.ToListAsync(ct);
-        if (products.Count == 0)
-        {
-            logger.LogWarning("Simulator skipped — no products in database");
-            return;
-        }
 
         var itemCount = Random.Shared.Next(1, Math.Min(4, products.Count + 1));
         var picked = products.OrderBy(_ => Random.Shared.Next()).Take(itemCount).ToList();
@@ -95,11 +103,14 @@ public class OrderSimulatorService(
 
         db.Orders.Add(order);
         await db.SaveChangesAsync(ct);
-        await tx.CommitAsync(ct);
-        // Publish is written to the outbox table inside the same transaction.
-        // The outbox delivery service will forward it to RabbitMQ, even after a restart.
+
+        // Publish writes to the outbox table via the same DbContext — must happen
+        // before commit so the outbox row and the order insert commit atomically.
         OrderCreated message = new() { Order = mapper.Map<OrderDto>(order) };
         await bus.Publish(message, ct);
+
+        await db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
 
         logger.LogInformation(
             "Simulated order #{Id} for {Customer} — {Items} item(s), ${Total:F2}",
