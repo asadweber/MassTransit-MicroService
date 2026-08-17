@@ -3,6 +3,7 @@ using Application.Messaging.Events;
 using Infrastructure;
 using Infrastructure.Persistence;
 using MassTransit;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
@@ -46,13 +47,15 @@ namespace OrderSaga.Saga
             });
 
             // Inner policy — added second, so it runs closer to the consumer (before the
-            // outer exponential policy sees the exception): EF Core optimistic-concurrency
-            // conflicts (two messages racing to update the same saga row) are expected
-            // under load and resolve almost instantly, so intercept and retry fast here
-            // instead of falling into the slower exponential policy.
+            // outer exponential policy sees the exception): both EF Core optimistic-concurrency
+            // conflicts and SQL Server deadlock victims (error 1205, wrapped as DbUpdateException
+            // when EF's save fails) are transient — two messages racing to update the same saga
+            // row — and resolve almost instantly, so intercept and retry fast here instead of
+            // falling into the slower exponential policy.
             endpointConfigurator.UseMessageRetry(r =>
             {
                 r.Handle<DbUpdateConcurrencyException>();
+                r.Handle<DbUpdateException>(ex => ex.InnerException is SqlException { Number: 1205 or 1204 or 1222 });
                 r.Interval(10, TimeSpan.FromMilliseconds(100));
             });
 
