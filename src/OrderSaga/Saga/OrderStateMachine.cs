@@ -103,15 +103,34 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                 .Then(ctx =>
                 {
                     var order = ctx.Message.Order;
-
-                    _mapper.Map(order, ctx.Saga);
-
+                    var notification = order.OrderNotification;
                     var correlationId = ctx.Saga.CorrelationId;
-                    foreach (var detail in ctx.Saga.OrderDetails)
-                        detail.OrderSagaStateCorrelationId = correlationId;
 
-                    if (ctx.Saga.OrderNotification is not null)
-                        ctx.Saga.OrderNotification.OrderSagaStateCorrelationId = correlationId;
+                    ctx.Saga.OrderId = order.Id;
+                    ctx.Saga.CustomerName = order.CustomerName;
+                    ctx.Saga.OrderDate = order.OrderDate;
+                    ctx.Saga.TotalAmount = order.TotalAmount;
+                    ctx.Saga.Status = order.Status;
+                    ctx.Saga.OrderDetails = order.OrderDetails.Select(d => new SagaOrderDetail
+                    {
+                        OrderSagaStateCorrelationId = correlationId,
+                        ProductId = d.ProductId,
+                        OrderQty = d.OrderQty,
+                        UnitPrice = d.UnitPrice,
+                        Total = d.Total,
+                    }).ToList();
+                    ctx.Saga.OrderNotification = notification is null ? null
+                        : new SagaOrderNotification
+                        {
+                            OrderSagaStateCorrelationId = correlationId,
+                            NotifyToEmail = notification.NotifyToEmail,
+                            NotifyToSMS = notification.NotifyToSMS,
+                            NotifyToPaci = notification.NotifyToPaci,
+                            EmailSendStatus = notification.EmailSendStatus,
+                            SMSSendStatus = notification.SMSSendStatus,
+                            PaciSendStatus = notification.PaciSendStatus,
+                            NotificationSendStatus = notification.NotificationSendStatus
+                        };
 
                     Serilog.Context.LogContext.PushProperty("CorrelationId", ctx.Saga.CorrelationId);
                     Serilog.Context.LogContext.PushProperty("OrderId", ctx.Saga.OrderId);
