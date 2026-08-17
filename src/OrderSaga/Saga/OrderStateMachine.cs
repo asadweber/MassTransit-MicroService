@@ -150,6 +150,8 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                 {
                     ctx.Saga.FirstUnavailableAt = null;
                     ctx.Saga.InventoryRetryCount = 0;
+                    ctx.Saga.Status = "Stock Available";
+
                     Serilog.Context.LogContext.PushProperty("CorrelationId", ctx.Saga.CorrelationId);
                     Serilog.Context.LogContext.PushProperty("OrderId", ctx.Saga.OrderId);
                 })
@@ -164,6 +166,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                     {
                         // Record the first time inventory became unavailable.
                         ctx.Saga.FirstUnavailableAt ??= DateTime.UtcNow;
+                        ctx.Saga.Status = "Stock Not Available";
                     })
                     .IfElse(ctx => IsRetryWindowExpired(ctx.Saga),
 
@@ -223,6 +226,10 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
         // fan-out completion (Email/SMS/Paci/Notification), failure ends in Failed.
         During(ProcessingPayment,
             When(PaymentProcessed, x => x.Message.IsSuccess)
+                .Then(ctx =>
+                    {
+                        ctx.Saga.Status = "Payment Complete";
+                    })
                 .PublishAsync(ctx => ctx.Init<OrderConfirmed>(ToOrderConfirmed(ctx.Saga)))
                 .TransitionTo(Confirmed)
                 .Then(ctx => _logger.LogInformation(
