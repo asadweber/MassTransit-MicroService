@@ -11,6 +11,7 @@ public class OrderNotification
     public bool EmailSendStatus { get; set; } = false;
     public bool SMSSendStatus { get; set; } = false;
     public bool PaciSendStatus { get; set; } = false;
+    public bool NotificationSendStatus { get; set; } = false;
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

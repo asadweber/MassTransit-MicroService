@@ -29,6 +29,9 @@ public class NotificationConsumer(
         order.Status = "Complete";
         await orderService.UpdateAsync(msg.Order.Id, order);
 
+        if (msg.Order.OrderNotification is not null)
+            msg.Order.OrderNotification.NotificationSendStatus = true;
+
         await context.Publish(new OrderConfirmedCompleted
         {
             CorrelationId = msg.CorrelationId,

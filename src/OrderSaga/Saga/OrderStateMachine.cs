@@ -89,17 +89,6 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
         Event(() => OrderConfirmedCompleted, x =>
            x.CorrelateById(ctx => ctx.Message.CorrelationId));
 
-        //Event(
-        //   () => OrderConfirmedCompleted,
-        //   e =>
-        //   {
-        //       e.CorrelateById(context =>
-        //           context.Message.CorrelationId);
-
-        //       e.OnMissingInstance(m =>
-        //           m.Discard());
-        //   });
-
         // Business-level retry for "not available yet" (no exception thrown), distinct from
         // transport-level UseMessageRetry/UseDelayedRedelivery which only handle faulted messages.
         Schedule(() => InventoryRetry, x => x.InventoryRetryTokenId, x =>
@@ -244,16 +233,24 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                     if (notification is null)
                         return;
 
+                    // The publishing consumer (Email/SMS/Paci sender) already updated its own
+                    // SendStatus flag on ctx.Message.Order.OrderNotification before publishing —
+                    // mirror that same flag onto the saga's copy instead of re-deriving it from
+                    // Process, so the two never drift if a channel's logic changes independently.
+                    var messageNotification = ctx.Message.Order?.OrderNotification;
                     switch (ctx.Message.Process)
                     {
                         case OrderConfirmationProcess.Email:
-                            notification.EmailSendStatus = true;
+                            notification.EmailSendStatus = messageNotification?.EmailSendStatus ?? true;
                             break;
                         case OrderConfirmationProcess.SMS:
-                            notification.SMSSendStatus = true;
+                            notification.SMSSendStatus = messageNotification?.SMSSendStatus ?? true;
                             break;
                         case OrderConfirmationProcess.Paci:
-                            notification.PaciSendStatus = true;
+                            notification.PaciSendStatus = messageNotification?.PaciSendStatus ?? true;
+                            break;
+                        case OrderConfirmationProcess.Notification:
+                            notification.NotificationSendStatus = messageNotification?.NotificationSendStatus ?? true;
                             break;
                     }
 
@@ -333,6 +330,12 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
         if (notification.NotifyToPaci && !notification.PaciSendStatus)
             return false;
 
+        // NotificationConsumer always fires (not gated by a NotifyToX flag) — its own
+        // completion must gate finalization the same way, or the saga can finalize
+        // before the always-on channel has run.
+        if (!notification.NotificationSendStatus)
+            return false;
+
         return true;
     }
 
@@ -380,7 +383,8 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
             NotifyToPaci = saga.OrderNotification.NotifyToPaci,
             EmailSendStatus = saga.OrderNotification.EmailSendStatus,
             SMSSendStatus = saga.OrderNotification.SMSSendStatus,
-            PaciSendStatus = saga.OrderNotification.PaciSendStatus
+            PaciSendStatus = saga.OrderNotification.PaciSendStatus,
+            NotificationSendStatus = saga.OrderNotification.NotificationSendStatus
         }
     };
 }
