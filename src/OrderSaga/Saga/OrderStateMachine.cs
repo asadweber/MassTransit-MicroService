@@ -243,29 +243,14 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                             : new SagaOrderNotification
                             {
                                 OrderNotificationId = notification.Id,
-                                OrderSagaStateCorrelationId =
-                                    correlationId,
-
-                                NotifyToEmail =
-                                    notification.NotifyToEmail,
-
-                                NotifyToSMS =
-                                    notification.NotifyToSMS,
-
-                                NotifyToPaci =
-                                    notification.NotifyToPaci,
-
-                                EmailSendStatus =
-                                    notification.EmailSendStatus,
-
-                                SMSSendStatus =
-                                    notification.SMSSendStatus,
-
-                                PaciSendStatus =
-                                    notification.PaciSendStatus,
-
-                                NotificationSendStatus =
-                                    notification.NotificationSendStatus
+                                OrderSagaStateCorrelationId =correlationId,
+                                NotifyToEmail =notification.NotifyToEmail,
+                                NotifyToSMS =notification.NotifyToSMS,
+                                NotifyToPaci =notification.NotifyToPaci,
+                                EmailSendStatus =notification.EmailSendStatus,
+                                SMSSendStatus =notification.SMSSendStatus,
+                                PaciSendStatus =notification.PaciSendStatus,
+                                NotificationSendStatus =notification.NotificationSendStatus
                             };
 
                     using var correlationScope =
@@ -351,8 +336,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
 
                 .Then(ctx =>
                 {
-                    ctx.Saga.FirstUnavailableAt ??=
-                        DateTimeOffset.UtcNow;
+                    ctx.Saga.FirstUnavailableAt ??= DateTime.UtcNow;
 
                     ctx.Saga.Status =
                         "Stock Not Available";
