@@ -8,8 +8,8 @@ using static MassTransit.Monitoring.Performance.BuiltInCounters;
 namespace NotificationService;
 
 [ExcludeFromConfigureEndpoints]
-public class NotificationConsumer(
-    ILogger<NotificationConsumer> logger,
+public class EmailNotificationConsumer(
+    ILogger<EmailNotificationConsumer> logger,
     IOrderService orderService, IUnitOfWork uow) : IConsumer<OrderConfirmed>
 {
     public async Task Consume(ConsumeContext<OrderConfirmed> context)
@@ -18,41 +18,32 @@ public class NotificationConsumer(
         using var _ = Serilog.Context.LogContext.PushProperty("CorrelationId", message.CorrelationId);
         using var __ = Serilog.Context.LogContext.PushProperty("OrderId", message.Order.Id);
 
-        var order = await orderService.GetByIdAsync(message.Order.Id);
-        if (order is null)
-        {
-            logger.LogWarning(
-                "Order {OrderId} [{CorrelationId}]: not found, skipping notification completion",
-                message.Order.Id, message.CorrelationId);
-            return;
-        }
-
-        order.Status = "Complete";
-        await orderService.UpdateAsync(message.Order.Id, order);
-        message.Order.Status = "Complete";
-
         var notification = (await uow.OrderNotifications.FindAsync(n => n.OrderId == message.Order.Id))
             .FirstOrDefault();
 
-        if (notification is not null)
+        if (notification is null || !notification.NotifyToEmail)
         {
-            // TODO: send email for real — stubbed as sent for now.
-            notification.NotificationSendStatus = true;
-            await uow.OrderNotifications.Update(notification);
-            await uow.SaveChangesAsync();
+            logger.LogInformation(
+                "Order {OrderId} [{CorrelationId}]: Email not requested, skipping",
+                message.Order.Id,
+                message.CorrelationId);
+            return;
         }
 
-        //await Task.Delay(1000); // Simulate email sending delay
+        // TODO: send email for real — stubbed as sent for now.
+        notification.EmailSendStatus = true;
+        await uow.OrderNotifications.Update(notification);
+        await uow.SaveChangesAsync();
 
         await context.Publish(new NotificationCompleted
         {
             CorrelationId = message.CorrelationId,
             Order = message.Order,
-            Process = NotificationProcess.Notification
+            Process = NotificationProcess.Email
         });
 
         logger.LogInformation(
-            "Order {OrderId} [{CorrelationId}]: Notification completed",
+            "Order {OrderId} [{CorrelationId}]: Email notification completed",
             message.Order.Id,
             message.CorrelationId);
     }

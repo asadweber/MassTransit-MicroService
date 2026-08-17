@@ -29,4 +29,5 @@ public class OrderSagaState : SagaStateMachineInstance, ISagaVersion
 
     public Guid? InventoryRetryTokenId { get; set; }
 
+
 }
