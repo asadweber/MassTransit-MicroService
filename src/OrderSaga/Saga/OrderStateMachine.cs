@@ -270,7 +270,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                     switch (ctx.Message.Process)
                     {
                         case OrderConfirmationProcess.Email:
-                            notification.EmailSendStatus = messageNotification?.EmailSendStatus ?? true;
+                            notification.EmailSendStatus = messageNotification?.EmailSendStatus ?? true;                            
                             break;
                         case OrderConfirmationProcess.SMS:
                             notification.SMSSendStatus = messageNotification?.SMSSendStatus ?? true;
@@ -289,6 +289,10 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                 })
                 .IfElse(ctx => IsNotificationFanOutComplete(ctx.Saga),
                     done => done
+                          .Then(ctx =>
+                          {
+                              ctx.Saga.Status = "Completed";
+                          })
                         .Then(ctx => _logger.LogInformation(
                             "Order {OrderId} [{CorrelationId}]: Notification fan-out complete, finalizing",
                             ctx.Saga.OrderId, ctx.Saga.CorrelationId))
