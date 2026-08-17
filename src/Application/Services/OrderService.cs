@@ -72,7 +72,7 @@ public class OrderService(IUnitOfWork uow, IPublishEndpoint bus, IMapper mapper)
 
         existing.TotalAmount = existing.OrderDetails.Sum(d => d.Total);
 
-       await uow.Orders.Update(existing);
+        await uow.Orders.Update(existing);
         await uow.SaveChangesAsync();
         return true;
     }
