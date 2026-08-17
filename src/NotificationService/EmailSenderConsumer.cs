@@ -45,8 +45,13 @@ public class EmailSenderConsumer(
             await uow.OrderNotifications.Update(notification);
             await uow.SaveChangesAsync();
 
-            message.Order.OrderNotification.EmailSendStatus=true;
+            
         }
+
+
+        if (message.Order.OrderNotification is not null)
+            message.Order.OrderNotification.EmailSendStatus = true;
+
 
         await Task.Delay(1000); // Simulate email sending delay
 

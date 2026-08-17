@@ -44,11 +44,11 @@ public class PaciSenderConsumer(
             notification.PaciSendStatus = true;
             await uow.OrderNotifications.Update(notification);
             await uow.SaveChangesAsync();
+        }
 
+        if (message.Order.OrderNotification is not null)
             message.Order.OrderNotification.PaciSendStatus = true;
 
-        }
-        
         await Task.Delay(1000); // Simulate email sending delay
         // If processing succeeds, publish completion.
         await context.Publish(new OrderConfirmedCompleted
