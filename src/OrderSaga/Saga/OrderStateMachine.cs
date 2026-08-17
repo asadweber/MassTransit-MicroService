@@ -376,5 +376,34 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
         Order = ToOrderDto(saga),
     };
 
-    private OrderDto ToOrderDto(OrderSagaState saga) => _mapper.Map<OrderDto>(saga);
+    private OrderDto ToOrderDto(OrderSagaState saga) => new()
+    {
+        Id = saga.OrderId,
+        CustomerName = saga.CustomerName,
+        OrderDate = saga.OrderDate,
+        TotalAmount = saga.TotalAmount,
+        Status = saga.Status,
+        OrderDetails = saga.OrderDetails.Select(d => new OrderDetailDto
+        {
+            Id = d.Id,
+            OrderId = saga.OrderId,
+            ProductId = d.ProductId,
+            OrderQty = d.OrderQty,
+            UnitPrice = d.UnitPrice,
+            Total = d.Total,
+        }).ToList(),
+
+        OrderNotification = saga.OrderNotification == null ? null : new OrderNotificationDto
+        {
+            Id = saga.OrderNotification.Id,
+            OrderId = saga.OrderId,
+            NotifyToEmail = saga.OrderNotification.NotifyToEmail,
+            NotifyToSMS = saga.OrderNotification.NotifyToSMS,
+            NotifyToPaci = saga.OrderNotification.NotifyToPaci,
+            EmailSendStatus = saga.OrderNotification.EmailSendStatus,
+            SMSSendStatus = saga.OrderNotification.SMSSendStatus,
+            PaciSendStatus = saga.OrderNotification.PaciSendStatus,
+            NotificationSendStatus = saga.OrderNotification.NotificationSendStatus
+        }
+    };
 }
