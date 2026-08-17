@@ -54,9 +54,27 @@ namespace OrderSaga.Saga
             // falling into the slower exponential policy.
             endpointConfigurator.UseMessageRetry(retry =>
             {
+                // SQL Server deadlock victim
                 retry.Handle<SqlException>(ex => ex.Number == 1205);
+
+                // SQL command timeout
+                retry.Handle<SqlException>(ex => ex.Number == -2);
+
+                // Lock request timeout
+                retry.Handle<SqlException>(ex => ex.Number == 1222);
+
+                // Could not acquire required database resources
+                retry.Handle<SqlException>(ex => ex.Number == 1204);
+
+                // EF optimistic concurrency conflict
                 retry.Handle<DbUpdateConcurrencyException>();
-                retry.Handle<DbUpdateException>(ex => ex.InnerException is SqlException { Number: 1205 or 1204 or 1222 });
+
+                // Some EF operations wrap SqlException inside DbUpdateException
+                retry.Handle<DbUpdateException>(ex =>
+                    ex.InnerException is SqlException sql &&
+                    sql.Number is 1204 or 1205 or 1222 or -2);
+
+
                 retry.Interval(10, TimeSpan.FromMilliseconds(100));
             });
 
