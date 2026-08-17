@@ -16,6 +16,4 @@ public class SagaOrderNotification
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-    public OrderSagaState OrderSagaState { get; set; } = default!;
-
 }

@@ -30,13 +30,12 @@ public class OrderSagaStateConfiguration : IEntityTypeConfiguration<OrderSagaSta
             detail.Property(d => d.UnitPrice).HasPrecision(18, 2);
             detail.Property(d => d.Total).HasPrecision(18, 2);
         });
-        // One-to-one relationship
+        // One-to-one relationship. CorrelationId is already the primary key (HasKey above),
+        // so EF uses it as the principal key by default — no need for an explicit HasPrincipalKey.
         builder.HasOne(x => x.OrderNotification)
-             .WithOne(x => x.OrderSagaState)
+             .WithOne()
              .HasForeignKey<SagaOrderNotification>(
                  x => x.OrderSagaStateCorrelationId)
-             .HasPrincipalKey<OrderSagaState>(
-                 x => x.CorrelationId)
              .OnDelete(DeleteBehavior.Cascade);
 
 
