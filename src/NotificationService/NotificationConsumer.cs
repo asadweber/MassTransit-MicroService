@@ -48,7 +48,7 @@ public class NotificationConsumer(
         {
             CorrelationId = message.CorrelationId,
             Order = message.Order,
-            Process = OrderConfirmationProcess.Notification
+            Process = NotificationProcess.Notification
         });
 
         logger.LogInformation(

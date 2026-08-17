@@ -10,6 +10,6 @@ namespace Application.Messaging.Events
         public Guid CorrelationId { get; init; }
 
         public OrderDto Order { get; set; } = new();
-        public OrderConfirmationProcess Process { get; init; }
+        public NotificationProcess Process { get; init; }
     }
 }

@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Application.Messaging.Events
 {
-    public enum OrderConfirmationProcess
+    public enum NotificationProcess
     {
         Email = 1,
         SMS = 2,
