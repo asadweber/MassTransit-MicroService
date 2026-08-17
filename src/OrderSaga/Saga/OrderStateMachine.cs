@@ -113,6 +113,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                     ctx.Saga.Status = order.Status;
                     ctx.Saga.OrderDetails = order.OrderDetails.Select(d => new SagaOrderDetail
                     {
+                        OrderDetailId = d.Id,
                         OrderSagaStateCorrelationId = correlationId,
                         ProductId = d.ProductId,
                         OrderQty = d.OrderQty,
@@ -122,6 +123,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                     ctx.Saga.OrderNotification = notification is null ? null
                         : new SagaOrderNotification
                         {
+                            OrderNotificationId = notification.Id,
                             OrderSagaStateCorrelationId = correlationId,
                             NotifyToEmail = notification.NotifyToEmail,
                             NotifyToSMS = notification.NotifyToSMS,
@@ -385,7 +387,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
         Status = saga.Status,
         OrderDetails = saga.OrderDetails.Select(d => new OrderDetailDto
         {
-            Id = d.Id,
+            Id = d.OrderDetailId,
             OrderId = saga.OrderId,
             ProductId = d.ProductId,
             OrderQty = d.OrderQty,
@@ -395,7 +397,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
 
         OrderNotification = saga.OrderNotification == null ? null : new OrderNotificationDto
         {
-            Id = saga.OrderNotification.Id,
+            Id = saga.OrderNotification.OrderNotificationId,
             OrderId = saga.OrderId,
             NotifyToEmail = saga.OrderNotification.NotifyToEmail,
             NotifyToSMS = saga.OrderNotification.NotifyToSMS,

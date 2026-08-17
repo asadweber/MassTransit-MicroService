@@ -3,6 +3,7 @@ namespace Infrastructure.Persistence;
 public class SagaOrderNotification
 {
     public long Id { get; set; }
+    public long OrderNotificationId { get; set; }
     public Guid OrderSagaStateCorrelationId { get; set; }
 
     public bool NotifyToEmail { get; set; }
@@ -15,5 +16,4 @@ public class SagaOrderNotification
     public bool NotificationSendStatus { get; set; } = false;
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
 }

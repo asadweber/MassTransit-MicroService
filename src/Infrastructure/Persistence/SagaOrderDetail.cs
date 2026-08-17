@@ -3,6 +3,7 @@ namespace Infrastructure.Persistence;
 public class SagaOrderDetail
 {
     public long Id { get; set; }
+    public long OrderDetailId { get; set; }
     public Guid OrderSagaStateCorrelationId { get; set; }
     public long ProductId { get; set; }
     public long OrderQty { get; set; }
