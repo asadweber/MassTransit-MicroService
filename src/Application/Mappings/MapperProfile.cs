@@ -34,11 +34,15 @@ public class MapperProfile : Profile
             .ForMember(d => d.InventoryRetryCount, o => o.Ignore())
             .ForMember(d => d.InventoryRetryTokenId, o => o.Ignore());
 
+        // Id is an identity column on both target entities — never copy the DTO's
+        // Id across, or EF Core issues an explicit-value INSERT and SQL Server
+        // rejects it (IDENTITY_INSERT is OFF).
         CreateMap<OrderDetailDto, SagaOrderDetail>()
             .ForMember(d => d.Id, o => o.Ignore())
             .ForMember(d => d.OrderSagaStateCorrelationId, o => o.Ignore());
 
         CreateMap<OrderNotificationDto, SagaOrderNotification>()
+            .ForMember(d => d.Id, o => o.Ignore())
             .ForMember(d => d.OrderSagaStateCorrelationId, o => o.Ignore());
 
     }
