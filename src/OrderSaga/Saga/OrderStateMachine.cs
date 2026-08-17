@@ -242,7 +242,8 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
             // stale InventoryRetry firing after payment has already started shouldn't crash
             // the consumer — drop it instead of throwing UnhandledEventException.
             Ignore(InventoryChecked),
-            Ignore(InventoryRetry.Received));
+            Ignore(InventoryRetry.Received),
+            Ignore(OrderConfirmedCompleted));
 
         // Confirmed order waits for each enabled notification channel (plus the always-on
         // NotificationConsumer) to report completion before finalizing the saga.
