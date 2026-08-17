@@ -100,7 +100,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
     /// <summary>
     /// Notification process completion event.
     /// </summary>
-    public Event<NotificationCompleted> OrderConfirmedCompleted
+    public Event<NotificationCompleted> NotificationCompleted
     {
         get;
         private set;
@@ -174,7 +174,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                 context => context.Message.CorrelationId);
         });
 
-        Event(() => OrderConfirmedCompleted, x =>
+        Event(() => NotificationCompleted, x =>
         {
             x.CorrelateById(
                 context => context.Message.CorrelationId);
@@ -423,7 +423,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
             // ---------------------------------------------------------
             Ignore(OrderCreated),
             Ignore(PaymentProcessed),
-            Ignore(OrderConfirmedCompleted));
+            Ignore(NotificationCompleted));
     }
 
     #endregion
@@ -487,7 +487,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
             Ignore(OrderCreated),
             Ignore(InventoryChecked),
             Ignore(InventoryRetry.Received),
-            Ignore(OrderConfirmedCompleted));
+            Ignore(NotificationCompleted));
     }
 
     #endregion
@@ -499,7 +499,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
         During(
             PaymentConfirmed,
 
-            When(OrderConfirmedCompleted)
+            When(NotificationCompleted)
                 .Then(ctx =>
                 {
                     ctx.Saga.Status = "Completed";
@@ -539,7 +539,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
             Ignore(InventoryChecked),
             Ignore(PaymentProcessed),
             Ignore(OrderCreated),
-            Ignore(OrderConfirmedCompleted),
+            Ignore(NotificationCompleted),
             Ignore(InventoryRetry.Received));
     }
 
