@@ -99,6 +99,7 @@ namespace Infrastructure.Migrations
                 {
                     Id = table.Column<long>(type: "bigint", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
+                    OrderDetailId = table.Column<long>(type: "bigint", nullable: false),
                     OrderSagaStateCorrelationId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     ProductId = table.Column<long>(type: "bigint", nullable: false),
                     OrderQty = table.Column<long>(type: "bigint", nullable: false),
@@ -122,6 +123,7 @@ namespace Infrastructure.Migrations
                 {
                     Id = table.Column<long>(type: "bigint", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
+                    OrderNotificationId = table.Column<long>(type: "bigint", nullable: false),
                     OrderSagaStateCorrelationId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     NotifyToEmail = table.Column<bool>(type: "bit", nullable: false),
                     NotifyToSMS = table.Column<bool>(type: "bit", nullable: false),

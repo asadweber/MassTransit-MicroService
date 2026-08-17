@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260817071716_Init")]
+    [Migration("20260817081658_Init")]
     partial class Init
     {
         /// <inheritdoc />
@@ -285,6 +285,9 @@ namespace Infrastructure.Migrations
                     b.Property<bool>("NotifyToSMS")
                         .HasColumnType("bit");
 
+                    b.Property<long>("OrderNotificationId")
+                        .HasColumnType("bigint");
+
                     b.Property<Guid>("OrderSagaStateCorrelationId")
                         .HasColumnType("uniqueidentifier");
 
@@ -342,6 +345,9 @@ namespace Infrastructure.Migrations
 
                             SqlServerPropertyBuilderExtensions.UseIdentityColumn(b1.Property<long>("Id"));
 
+                            b1.Property<long>("OrderDetailId")
+                                .HasColumnType("bigint");
+
                             b1.Property<long>("OrderQty")
                                 .HasColumnType("bigint");
 
@@ -374,13 +380,11 @@ namespace Infrastructure.Migrations
 
             modelBuilder.Entity("Infrastructure.Persistence.SagaOrderNotification", b =>
                 {
-                    b.HasOne("Infrastructure.Persistence.OrderSagaState", "OrderSagaState")
+                    b.HasOne("Infrastructure.Persistence.OrderSagaState", null)
                         .WithOne("OrderNotification")
                         .HasForeignKey("Infrastructure.Persistence.SagaOrderNotification", "OrderSagaStateCorrelationId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("OrderSagaState");
                 });
 
             modelBuilder.Entity("Domain.Entities.Order", b =>
