@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260817081658_Init")]
+    [Migration("20260817083441_Init")]
     partial class Init
     {
         /// <inheritdoc />
@@ -259,52 +259,6 @@ namespace Infrastructure.Migrations
                     b.ToTable("OrderSagaStates", (string)null);
                 });
 
-            modelBuilder.Entity("Infrastructure.Persistence.SagaOrderNotification", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("EmailSendStatus")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("NotificationSendStatus")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("NotifyToEmail")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("NotifyToPaci")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("NotifyToSMS")
-                        .HasColumnType("bit");
-
-                    b.Property<long>("OrderNotificationId")
-                        .HasColumnType("bigint");
-
-                    b.Property<Guid>("OrderSagaStateCorrelationId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<bool>("PaciSendStatus")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("SMSSendStatus")
-                        .HasColumnType("bit");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("OrderSagaStateCorrelationId")
-                        .IsUnique();
-
-                    b.ToTable("SagaOrderNotification");
-                });
-
             modelBuilder.Entity("Domain.Entities.OrderDetail", b =>
                 {
                     b.HasOne("Domain.Entities.Order", "Order")
@@ -375,27 +329,64 @@ namespace Infrastructure.Migrations
                                 .HasForeignKey("OrderSagaStateCorrelationId");
                         });
 
-                    b.Navigation("OrderDetails");
-                });
+                    b.OwnsOne("Infrastructure.Persistence.SagaOrderNotification", "OrderNotification", b1 =>
+                        {
+                            b1.Property<long>("Id")
+                                .ValueGeneratedOnAdd()
+                                .HasColumnType("bigint");
 
-            modelBuilder.Entity("Infrastructure.Persistence.SagaOrderNotification", b =>
-                {
-                    b.HasOne("Infrastructure.Persistence.OrderSagaState", null)
-                        .WithOne("OrderNotification")
-                        .HasForeignKey("Infrastructure.Persistence.SagaOrderNotification", "OrderSagaStateCorrelationId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                            SqlServerPropertyBuilderExtensions.UseIdentityColumn(b1.Property<long>("Id"));
+
+                            b1.Property<DateTime>("CreatedAt")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool>("EmailSendStatus")
+                                .HasColumnType("bit");
+
+                            b1.Property<bool>("NotificationSendStatus")
+                                .HasColumnType("bit");
+
+                            b1.Property<bool>("NotifyToEmail")
+                                .HasColumnType("bit");
+
+                            b1.Property<bool>("NotifyToPaci")
+                                .HasColumnType("bit");
+
+                            b1.Property<bool>("NotifyToSMS")
+                                .HasColumnType("bit");
+
+                            b1.Property<long>("OrderNotificationId")
+                                .HasColumnType("bigint");
+
+                            b1.Property<Guid>("OrderSagaStateCorrelationId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<bool>("PaciSendStatus")
+                                .HasColumnType("bit");
+
+                            b1.Property<bool>("SMSSendStatus")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("Id");
+
+                            b1.HasIndex("OrderSagaStateCorrelationId")
+                                .IsUnique();
+
+                            b1.ToTable("SagaOrderNotifications", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("OrderSagaStateCorrelationId");
+                        });
+
+                    b.Navigation("OrderDetails");
+
+                    b.Navigation("OrderNotification");
                 });
 
             modelBuilder.Entity("Domain.Entities.Order", b =>
                 {
                     b.Navigation("OrderDetails");
 
-                    b.Navigation("OrderNotification");
-                });
-
-            modelBuilder.Entity("Infrastructure.Persistence.OrderSagaState", b =>
-                {
                     b.Navigation("OrderNotification");
                 });
 #pragma warning restore 612, 618

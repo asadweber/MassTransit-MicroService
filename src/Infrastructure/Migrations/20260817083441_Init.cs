@@ -118,7 +118,7 @@ namespace Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "SagaOrderNotification",
+                name: "SagaOrderNotifications",
                 columns: table => new
                 {
                     Id = table.Column<long>(type: "bigint", nullable: false)
@@ -136,9 +136,9 @@ namespace Infrastructure.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_SagaOrderNotification", x => x.Id);
+                    table.PrimaryKey("PK_SagaOrderNotifications", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_SagaOrderNotification_OrderSagaStates_OrderSagaStateCorrelationId",
+                        name: "FK_SagaOrderNotifications_OrderSagaStates_OrderSagaStateCorrelationId",
                         column: x => x.OrderSagaStateCorrelationId,
                         principalTable: "OrderSagaStates",
                         principalColumn: "CorrelationId",
@@ -213,8 +213,8 @@ namespace Infrastructure.Migrations
                 column: "OrderSagaStateCorrelationId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_SagaOrderNotification_OrderSagaStateCorrelationId",
-                table: "SagaOrderNotification",
+                name: "IX_SagaOrderNotifications_OrderSagaStateCorrelationId",
+                table: "SagaOrderNotifications",
                 column: "OrderSagaStateCorrelationId",
                 unique: true);
         }
@@ -232,7 +232,7 @@ namespace Infrastructure.Migrations
                 name: "SagaOrderDetails");
 
             migrationBuilder.DropTable(
-                name: "SagaOrderNotification");
+                name: "SagaOrderNotifications");
 
             migrationBuilder.DropTable(
                 name: "Products");
