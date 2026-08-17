@@ -8,315 +8,661 @@ using MassTransit;
 namespace OrderSaga.Saga;
 
 /// <summary>
-/// Order-processing saga: OrderCreated -> CheckingInventory -> ProcessingPayment -> Confirmed,
-/// with a Failed dead-end on inventory-unavailable-past-window or payment failure.
-/// Persisted via EF Core (<see cref="OrderSagaState"/>) so state survives process restarts.
+/// Coordinates the complete order-processing workflow:
+///
+/// OrderCreated
+///     ↓
+/// CheckingInventory
+///     ↓
+/// ProcessingPayment
+///     ↓
+/// Confirmed
+///     ↓
+/// Notification fan-out
+///     ↓
+/// Finalize
+///
+/// Failed business processes remain in the saga table for operational
+/// visibility and possible recovery. Successfully completed sagas are
+/// finalized and removed from the saga repository.
 /// </summary>
 public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
 {
-    // Give up polling inventory after 7 days of continuous unavailability.
-    public static readonly TimeSpan MaxRetryWindow = TimeSpan.FromDays(7);
+    #region Retry Configuration
 
-    // Delay before the first inventory re-check.
-    public static readonly TimeSpan FirstRetryDelay = TimeSpan.FromMinutes(1);
+    /// <summary>
+    /// Maximum period during which inventory can remain unavailable.
+    /// </summary>
+    public static readonly TimeSpan MaxRetryWindow =
+        TimeSpan.FromDays(7);
 
-    // Ceiling for any single backoff step, however large BackoffFactor grows it.
-    public static readonly TimeSpan MaxRetryDelay = TimeSpan.FromDays(1);
+    /// <summary>
+    /// Delay before the first inventory retry.
+    /// </summary>
+    public static readonly TimeSpan FirstRetryDelay =
+        TimeSpan.FromMinutes(1);
 
-    // Multiplier applied per retry attempt (1m, 5m, 25m, 125m, ...).
+    /// <summary>
+    /// Maximum delay between individual inventory retries.
+    /// </summary>
+    public static readonly TimeSpan MaxRetryDelay =
+        TimeSpan.FromDays(1);
+
+    /// <summary>
+    /// Exponential backoff multiplier:
+    ///
+    /// 1m → 5m → 25m → 125m → ...
+    /// </summary>
     private const int BackoffFactor = 5;
 
-    #region Saga State
-    // Waiting on InventoryChecked after publishing CheckInventory.
+    #endregion
+
+    #region States
+
+    /// <summary>
+    /// Waiting for InventoryChecked after requesting inventory validation.
+    /// </summary>
     public State CheckingInventory { get; private set; } = null!;
 
-    // Waiting on PaymentProcessed after publishing ProcessPayment.
+    /// <summary>
+    /// Waiting for PaymentProcessed after requesting payment processing.
+    /// </summary>
     public State ProcessingPayment { get; private set; } = null!;
 
-    // Terminal success state; saga finalizes here.
+    /// <summary>
+    /// Payment succeeded. Waiting for notification fan-out completion.
+    /// </summary>
     public State Confirmed { get; private set; } = null!;
 
-    // Terminal failure state (inventory exhausted retries, or payment declined).
+    /// <summary>
+    /// Business process failed.
+    /// Failed saga instances remain persisted for operational recovery.
+    /// </summary>
     public State Failed { get; private set; } = null!;
 
     #endregion
 
+    #region Events
 
-    #region Saga Events
-
-    // Starts a new saga instance.
+    /// <summary>
+    /// Starts a new order saga.
+    /// </summary>
     public Event<OrderCreated> OrderCreated { get; private set; } = null!;
 
-    // Reply from InventoryService indicating stock availability.
+    /// <summary>
+    /// Inventory service response.
+    /// </summary>
     public Event<InventoryChecked> InventoryChecked { get; private set; } = null!;
 
-    // Reply from PaymentService indicating charge outcome.
+    /// <summary>
+    /// Payment service response.
+    /// </summary>
     public Event<PaymentProcessed> PaymentProcessed { get; private set; } = null!;
 
-    public Event<OrderConfirmedCompleted> OrderConfirmedCompleted { get; private set; } = default!;
+    /// <summary>
+    /// Notification process completion event.
+    /// </summary>
+    public Event<OrderConfirmedCompleted> OrderConfirmedCompleted
+    {
+        get;
+        private set;
+    } = null!;
 
     #endregion
 
+    #region Schedules
 
+    /// <summary>
+    /// Scheduled inventory retry.
+    /// </summary>
+    public Schedule<OrderSagaState, CheckInventory> InventoryRetry
+    {
+        get;
+        private set;
+    } = null!;
 
-    // Delayed self-message used to re-poll inventory without blocking the consumer.
-    public Schedule<OrderSagaState, CheckInventory> InventoryRetry { get; private set; } = null!;
-
-
+    #endregion
 
     private readonly ILogger<OrderStateMachine> _logger;
     private readonly IMapper _mapper;
 
-    public OrderStateMachine(ILogger<OrderStateMachine> logger, IMapper mapper)
+    public OrderStateMachine(
+        ILogger<OrderStateMachine> logger,
+        IMapper mapper)
     {
         _logger = logger;
         _mapper = mapper;
 
         InstanceState(x => x.CurrentState);
 
-        // First event for a saga instance: correlate by OrderId (no CorrelationId exists yet)
-        // and mint a new one. All later events correlate by that generated CorrelationId.
+        ConfigureEvents();
+        ConfigureSchedules();
+        ConfigureInitialState();
+        ConfigureInventoryState();
+        ConfigurePaymentState();
+        ConfigureConfirmedState();
+        ConfigureFailedState();
+
+        // Finalized saga instances are removed from the repository.
+        SetCompletedWhenFinalized();
+    }
+
+    #region Event Configuration
+
+    private void ConfigureEvents()
+    {
+        // OrderCreated is the first event.
+        //
+        // There is no saga CorrelationId yet, therefore correlate using
+        // the business OrderId and generate a new CorrelationId.
         Event(() => OrderCreated, x =>
-            x.CorrelateBy((instance, context) => instance.OrderId == context.Message.Order.Id)
-             .SelectId(_ => NewId.NextGuid()));
-
-        Event(() => InventoryChecked, x =>
-            x.CorrelateById(ctx => ctx.Message.CorrelationId));
-
-        Event(() => PaymentProcessed, x =>
-            x.CorrelateById(ctx => ctx.Message.CorrelationId));
-
-        Event(() => OrderConfirmedCompleted, x =>
-           x.CorrelateById(ctx => ctx.Message.CorrelationId));
-
-        // Business-level retry for "not available yet" (no exception thrown), distinct from
-        // transport-level UseMessageRetry/UseDelayedRedelivery which only handle faulted messages.
-        Schedule(() => InventoryRetry, x => x.InventoryRetryTokenId, x =>
         {
-            x.Delay = FirstRetryDelay;
-            x.Received = r => r.CorrelateById(ctx => ctx.Message.CorrelationId);
+            x.CorrelateBy(
+                (instance, context) =>
+                    instance.OrderId == context.Message.Order.Id);
+
+            x.SelectId(_ => NewId.NextGuid());
         });
 
-        // New order: record it on the saga, ask InventoryService to check stock, move on.
+        Event(() => InventoryChecked, x =>
+        {
+            x.CorrelateById(
+                context => context.Message.CorrelationId);
+        });
+
+        Event(() => PaymentProcessed, x =>
+        {
+            x.CorrelateById(
+                context => context.Message.CorrelationId);
+        });
+
+        Event(() => OrderConfirmedCompleted, x =>
+        {
+            x.CorrelateById(
+                context => context.Message.CorrelationId);
+        });
+    }
+
+    #endregion
+
+    #region Schedule Configuration
+
+    private void ConfigureSchedules()
+    {
+        Schedule(
+            () => InventoryRetry,
+            x => x.InventoryRetryTokenId,
+            x =>
+            {
+                x.Delay = FirstRetryDelay;
+
+                x.Received = r =>
+                    r.CorrelateById(
+                        context => context.Message.CorrelationId);
+            });
+    }
+
+    #endregion
+
+    #region Initial State
+
+    private void ConfigureInitialState()
+    {
         Initially(
             When(OrderCreated)
                 .Then(ctx =>
                 {
                     var order = ctx.Message.Order;
                     var notification = order.OrderNotification;
-                    var correlationId = ctx.Saga.CorrelationId;
+
+                    var correlationId =
+                        ctx.Saga.CorrelationId;
 
                     ctx.Saga.OrderId = order.Id;
                     ctx.Saga.CustomerName = order.CustomerName;
                     ctx.Saga.OrderDate = order.OrderDate;
                     ctx.Saga.TotalAmount = order.TotalAmount;
                     ctx.Saga.Status = order.Status;
-                    ctx.Saga.OrderDetails = order.OrderDetails.Select(d => new SagaOrderDetail
-                    {
-                        OrderDetailId = d.Id,
-                        OrderSagaStateCorrelationId = correlationId,
-                        ProductId = d.ProductId,
-                        OrderQty = d.OrderQty,
-                        UnitPrice = d.UnitPrice,
-                        Total = d.Total,
-                    }).ToList();
-                    ctx.Saga.OrderNotification = notification is null ? null
-                        : new SagaOrderNotification
-                        {
-                            OrderNotificationId = notification.Id,
-                            OrderSagaStateCorrelationId = correlationId,
-                            NotifyToEmail = notification.NotifyToEmail,
-                            NotifyToSMS = notification.NotifyToSMS,
-                            NotifyToPaci = notification.NotifyToPaci,
-                            EmailSendStatus = notification.EmailSendStatus,
-                            SMSSendStatus = notification.SMSSendStatus,
-                            PaciSendStatus = notification.PaciSendStatus,
-                            NotificationSendStatus = notification.NotificationSendStatus
-                        };
 
-                    Serilog.Context.LogContext.PushProperty("CorrelationId", ctx.Saga.CorrelationId);
-                    Serilog.Context.LogContext.PushProperty("OrderId", ctx.Saga.OrderId);
+                    ctx.Saga.OrderDetails =
+                        order.OrderDetails
+                            .Select(d => new SagaOrderDetail
+                            {
+                                OrderDetailId = d.Id,
+                                OrderSagaStateCorrelationId = correlationId,
+                                ProductId = d.ProductId,
+                                OrderQty = d.OrderQty,
+                                UnitPrice = d.UnitPrice,
+                                Total = d.Total
+                            })
+                            .ToList();
+
+                    ctx.Saga.OrderNotification =
+                        notification == null
+                            ? null
+                            : new SagaOrderNotification
+                            {
+                                OrderNotificationId = notification.Id,
+                                OrderSagaStateCorrelationId =
+                                    correlationId,
+
+                                NotifyToEmail =
+                                    notification.NotifyToEmail,
+
+                                NotifyToSMS =
+                                    notification.NotifyToSMS,
+
+                                NotifyToPaci =
+                                    notification.NotifyToPaci,
+
+                                EmailSendStatus =
+                                    notification.EmailSendStatus,
+
+                                SMSSendStatus =
+                                    notification.SMSSendStatus,
+
+                                PaciSendStatus =
+                                    notification.PaciSendStatus,
+
+                                NotificationSendStatus =
+                                    notification.NotificationSendStatus
+                            };
+
+                    using var correlationScope =
+                        Serilog.Context.LogContext.PushProperty(
+                            "CorrelationId",
+                            ctx.Saga.CorrelationId);
+
+                    using var orderScope =
+                        Serilog.Context.LogContext.PushProperty(
+                            "OrderId",
+                            ctx.Saga.OrderId);
+
+                    _logger.LogInformation(
+                        "Order {OrderId} created. Starting inventory check",
+                        ctx.Saga.OrderId);
                 })
-                .PublishAsync(ctx => ctx.Init<CheckInventory>(ToCheckInventory(ctx.Saga)))
-                .TransitionTo(CheckingInventory)
-                .Then(ctx => _logger.LogInformation("OrderCreated -> CheckingInventory")));
 
-        // Handle the three ways CheckingInventory can resolve: available now, still
-        // unavailable (retry or give up), or a scheduled retry firing.
-        During(CheckingInventory,
-            When(InventoryChecked, x => x.Message.IsAvailable)
+                .PublishAsync(ctx =>
+                    ctx.Init<CheckInventory>(
+                        ToCheckInventory(ctx.Saga)))
+
+                .TransitionTo(CheckingInventory)
+
+                .Then(ctx =>
+                    _logger.LogInformation(
+                        "Order {OrderId} [{CorrelationId}]: " +
+                        "OrderCreated -> CheckingInventory",
+                        ctx.Saga.OrderId,
+                        ctx.Saga.CorrelationId)));
+    }
+
+    #endregion
+
+    #region Checking Inventory
+
+    private void ConfigureInventoryState()
+    {
+        During(
+            CheckingInventory,
+
+            // ---------------------------------------------------------
+            // Inventory AVAILABLE
+            // ---------------------------------------------------------
+            When(
+                InventoryChecked,
+                x => x.Message.IsAvailable)
+
                 .Unschedule(InventoryRetry)
+
                 .Then(ctx =>
                 {
                     ctx.Saga.FirstUnavailableAt = null;
                     ctx.Saga.InventoryRetryCount = 0;
+                    ctx.Saga.NextInventoryRetryAt = null;
                     ctx.Saga.Status = "Stock Available";
 
-                    Serilog.Context.LogContext.PushProperty("CorrelationId", ctx.Saga.CorrelationId);
-                    Serilog.Context.LogContext.PushProperty("OrderId", ctx.Saga.OrderId);
+                    _logger.LogInformation(
+                        "Order {OrderId} [{CorrelationId}]: " +
+                        "Inventory available",
+                        ctx.Saga.OrderId,
+                        ctx.Saga.CorrelationId);
                 })
-                .PublishAsync(ctx => ctx.Init<ProcessPayment>(ToProcessPayment(ctx.Saga)))
+
+                .PublishAsync(ctx =>
+                    ctx.Init<ProcessPayment>(
+                        ToProcessPayment(ctx.Saga)))
+
                 .TransitionTo(ProcessingPayment)
-                .Then(ctx => _logger.LogInformation("InventoryChecked (available) -> ProcessingPayment")),
 
-           // Still unavailable: give up only once MaxRetryWindow (7d from first-seen-unavailable)
-           // has elapsed; otherwise schedule another check with growing backoff.
-           When(InventoryChecked, x => !x.Message.IsAvailable)
-                    .Then(ctx =>
-                    {
-                        // Record the first time inventory became unavailable.
-                        ctx.Saga.FirstUnavailableAt ??= DateTime.UtcNow;
-                        ctx.Saga.Status = "Stock Not Available";
-                    })
-                    .IfElse(ctx => IsRetryWindowExpired(ctx.Saga),
+                .Then(ctx =>
+                    _logger.LogInformation(
+                        "Order {OrderId} [{CorrelationId}]: " +
+                        "InventoryChecked -> ProcessingPayment",
+                        ctx.Saga.OrderId,
+                        ctx.Saga.CorrelationId)),
 
-                        // Retry window has expired.
-                        expired => expired
-                            .Unschedule(InventoryRetry)
-                            .TransitionTo(Failed)
-                            .Then(ctx => _logger.LogWarning(
-                                "Order {OrderId} [{CorrelationId}]: Inventory unavailable for {RetryWindow}. Transitioning to Failed.",
+            // ---------------------------------------------------------
+            // Inventory NOT AVAILABLE
+            // ---------------------------------------------------------
+            When(
+                InventoryChecked,
+                x => !x.Message.IsAvailable)
+
+                .Then(ctx =>
+                {
+                    ctx.Saga.FirstUnavailableAt ??=
+                        DateTimeOffset.UtcNow;
+
+                    ctx.Saga.Status =
+                        "Stock Not Available";
+                })
+
+                .IfElse(
+                    ctx => IsRetryWindowExpired(ctx.Saga),
+
+                    // -------------------------------------------------
+                    // RETRY WINDOW EXPIRED
+                    // -------------------------------------------------
+                    expired => expired
+
+                        .Unschedule(InventoryRetry)
+
+                        .Then(ctx =>
+                        {
+                            ctx.Saga.Status =
+                                "Inventory Retry Expired";
+
+                            _logger.LogWarning(
+                                "Order {OrderId} [{CorrelationId}]: " +
+                                "Inventory unavailable for {RetryWindow}. " +
+                                "Moving to Failed",
                                 ctx.Saga.OrderId,
                                 ctx.Saga.CorrelationId,
-                                MaxRetryWindow))
-                             .Finalize(),
+                                MaxRetryWindow);
+                        })
 
-                        // Schedule another inventory check.
-                        retry => retry
-                            .Then(ctx =>
-                            {
-                                ctx.Saga.InventoryRetryCount++;
+                        .TransitionTo(Failed),
 
-                                // Computed once and reused below so the persisted
-                                // NextInventoryRetryAt always matches the actual
-                                // scheduled fire time, even if the delay formula changes.
-                                //var delay = GetRetryDelay(ctx.Saga.InventoryRetryCount);
-                                ctx.Saga.NextInventoryRetryAt = DateTime.UtcNow + TimeSpan.FromSeconds(30);
-                            })
-                            .Unschedule(InventoryRetry)
-                            .Schedule(
-                                InventoryRetry,
-                                ctx => ctx.Init<CheckInventory>(ToCheckInventory(ctx.Saga)),
-                                ctx => ctx.Saga.NextInventoryRetryAt!.Value - DateTime.UtcNow)
-                            .Then(ctx => _logger.LogInformation(
-                                "Order {OrderId} [{CorrelationId}]: Inventory unavailable. Retry #{RetryCount} scheduled for {NextRetry}.",
+                    // -------------------------------------------------
+                    // SCHEDULE NEXT RETRY
+                    // -------------------------------------------------
+                    retry => retry
+
+                        .Then(ctx =>
+                        {
+                            ctx.Saga.InventoryRetryCount++;
+
+                            var delay =
+                                GetRetryDelay(
+                                    ctx.Saga.InventoryRetryCount);
+
+                            ctx.Saga.NextInventoryRetryAt =
+                                DateTimeOffset.UtcNow + delay;
+
+                            _logger.LogInformation(
+                                "Order {OrderId} [{CorrelationId}]: " +
+                                "Inventory unavailable. " +
+                                "Retry #{RetryCount} scheduled in {Delay}",
                                 ctx.Saga.OrderId,
                                 ctx.Saga.CorrelationId,
                                 ctx.Saga.InventoryRetryCount,
-                                ctx.Saga.NextInventoryRetryAt))),
+                                delay);
+                        })
 
-            // Fires when the scheduled delay elapses (token stored via InventoryRetryTokenId) —
-            // re-publish as CheckInventory
-            // can tell a saga-driven retry apart from the initial check. Reads saga state via
-            // ToOrderDto(ctx.Saga) (not ctx.Message) so an admin edit to the order's line items while stuck retrying
-            // is picked up on the next check, instead of re-checking the stale scheduled payload.
+                        .Unschedule(InventoryRetry)
+
+                        .Schedule(
+                            InventoryRetry,
+                            ctx =>
+                                ctx.Init<CheckInventory>(
+                                    ToCheckInventory(ctx.Saga)),
+                            ctx =>
+                                ctx.Saga.NextInventoryRetryAt!.Value
+                                - DateTimeOffset.UtcNow)),
+
+            // ---------------------------------------------------------
+            // SCHEDULED INVENTORY RETRY
+            // ---------------------------------------------------------
             When(InventoryRetry.Received)
-                .Then(ctx => _logger.LogInformation(
-                    "Order {OrderId} [{CorrelationId}]: InventoryRetry fired, re-checking inventory",
-                    ctx.Saga.OrderId, ctx.Saga.CorrelationId))
-                .PublishAsync(ctx => ctx.Init<CheckInventory>(ToCheckInventory(ctx.Saga))),
 
-            // A PaymentProcessed reply shouldn't be possible here (ProcessPayment isn't
-            // published until CheckingInventory resolves), but a duplicate/late-redelivered
-            // message can still land while the saga is mid-transition. Drop it instead of
-            // throwing UnhandledEventException.
-            Ignore(PaymentProcessed));
-
-        // Payment resolves the saga: success moves to Confirmed to await notification
-        // fan-out completion (Email/SMS/Paci/Notification), failure ends in Failed.
-        During(ProcessingPayment,
-            When(PaymentProcessed, x => x.Message.IsSuccess)
                 .Then(ctx =>
-                    {
-                        ctx.Saga.Status = "Payment Complete";
-                    })
-                .PublishAsync(ctx => ctx.Init<OrderConfirmed>(ToOrderConfirmed(ctx.Saga)))
+                    _logger.LogInformation(
+                        "Order {OrderId} [{CorrelationId}]: " +
+                        "Inventory retry fired",
+                        ctx.Saga.OrderId,
+                        ctx.Saga.CorrelationId))
+
+                .PublishAsync(ctx =>
+                    ctx.Init<CheckInventory>(
+                        ToCheckInventory(ctx.Saga))),
+
+            // ---------------------------------------------------------
+            // Late / duplicate messages
+            // ---------------------------------------------------------
+            Ignore(PaymentProcessed),
+            Ignore(OrderConfirmedCompleted));
+    }
+
+    #endregion
+
+    #region Payment
+
+    private void ConfigurePaymentState()
+    {
+        During(
+            ProcessingPayment,
+
+            // ---------------------------------------------------------
+            // PAYMENT SUCCESS
+            // ---------------------------------------------------------
+            When(
+                PaymentProcessed,
+                x => x.Message.IsSuccess)
+
+                .Then(ctx =>
+                {
+                    ctx.Saga.Status =
+                        "Payment Complete";
+
+                    _logger.LogInformation(
+                        "Order {OrderId} [{CorrelationId}]: " +
+                        "Payment completed",
+                        ctx.Saga.OrderId,
+                        ctx.Saga.CorrelationId);
+                })
+
+                .PublishAsync(ctx =>
+                    ctx.Init<OrderConfirmed>(
+                        ToOrderConfirmed(ctx.Saga)))
+
                 .TransitionTo(Confirmed)
-                .Then(ctx => _logger.LogInformation(
-                    "Order {OrderId} [{CorrelationId}]: PaymentProcessed (success) -> Confirmed",
-                    ctx.Saga.OrderId, ctx.Saga.CorrelationId))
-                .IfElse(ctx => IsNotificationFanOutComplete(ctx.Saga),
-                    done => done.Finalize(),
+
+                // If there are no notifications to wait for,
+                // finalize immediately.
+                .IfElse(
+                    ctx => IsNotificationFanOutComplete(ctx.Saga),
+
+                    done => done
+
+                        .Then(ctx =>
+                        {
+                            ctx.Saga.Status =
+                                "Completed";
+                        })
+
+                        .Then(ctx =>
+                            _logger.LogInformation(
+                                "Order {OrderId} [{CorrelationId}]: " +
+                                "No notification fan-out pending. " +
+                                "Finalizing saga",
+                                ctx.Saga.OrderId,
+                                ctx.Saga.CorrelationId))
+
+                        .Finalize(),
+
                     pending => pending),
 
-            When(PaymentProcessed, x => !x.Message.IsSuccess)
-                .TransitionTo(Failed)
-                .Then(ctx => _logger.LogWarning(
-                    "Order {OrderId} [{CorrelationId}]: PaymentProcessed (declined) -> Failed",
-                    ctx.Saga.OrderId, ctx.Saga.CorrelationId)),
+            // ---------------------------------------------------------
+            // PAYMENT FAILURE
+            // ---------------------------------------------------------
+            When(
+                PaymentProcessed,
+                x => !x.Message.IsSuccess)
 
-            // Mirrors the CheckingInventory guard: a late/duplicate InventoryChecked or a
-            // stale InventoryRetry firing after payment has already started shouldn't crash
-            // the consumer — drop it instead of throwing UnhandledEventException.
+                .Then(ctx =>
+                {
+                    ctx.Saga.Status =
+                        "Payment Failed";
+
+                    _logger.LogWarning(
+                        "Order {OrderId} [{CorrelationId}]: " +
+                        "Payment declined. Moving to Failed",
+                        ctx.Saga.OrderId,
+                        ctx.Saga.CorrelationId);
+                })
+
+                .TransitionTo(Failed),
+
+            // ---------------------------------------------------------
+            // LATE / DUPLICATE EVENTS
+            // ---------------------------------------------------------
             Ignore(InventoryChecked),
             Ignore(InventoryRetry.Received),
             Ignore(OrderConfirmedCompleted));
+    }
 
-        // Confirmed order waits for each enabled notification channel (plus the always-on
-        // NotificationConsumer) to report completion before finalizing the saga.
-        During(Confirmed,
+    #endregion
+
+    #region Confirmed / Notification Fan-out
+
+    private void ConfigureConfirmedState()
+    {
+        During(
+            Confirmed,
+
             When(OrderConfirmedCompleted)
+
                 .Then(ctx =>
                 {
-                    var notification = ctx.Saga.OrderNotification;
-                    if (notification is null)
-                        return;
+                    var notification =
+                        ctx.Saga.OrderNotification;
 
-                    // The publishing consumer (Email/SMS/Paci sender) already updated its own
-                    // SendStatus flag on ctx.Message.Order.OrderNotification before publishing —
-                    // mirror that same flag onto the saga's copy instead of re-deriving it from
-                    // Process, so the two never drift if a channel's logic changes independently.
-                    var messageNotification = ctx.Message.Order?.OrderNotification;
+                    if (notification == null)
+                    {
+                        _logger.LogInformation(
+                            "Order {OrderId} [{CorrelationId}]: " +
+                            "Notification completion received, " +
+                            "but no notification configuration exists",
+                            ctx.Saga.OrderId,
+                            ctx.Saga.CorrelationId);
+
+                        return;
+                    }
+
+                    // The completion event itself means that
+                    // the specified process completed successfully.
                     switch (ctx.Message.Process)
                     {
                         case OrderConfirmationProcess.Email:
-                            notification.EmailSendStatus = messageNotification?.EmailSendStatus ?? true;                            
+                            notification.EmailSendStatus = true;
                             break;
+
                         case OrderConfirmationProcess.SMS:
-                            notification.SMSSendStatus = messageNotification?.SMSSendStatus ?? true;
+                            notification.SMSSendStatus = true;
                             break;
+
                         case OrderConfirmationProcess.Paci:
-                            notification.PaciSendStatus = messageNotification?.PaciSendStatus ?? true;
+                            notification.PaciSendStatus = true;
                             break;
+
                         case OrderConfirmationProcess.Notification:
-                            notification.NotificationSendStatus = messageNotification?.NotificationSendStatus ?? true;
+                            notification.NotificationSendStatus = true;
                             break;
                     }
 
                     _logger.LogInformation(
-                        "Order {OrderId} [{CorrelationId}]: {Process} completed",
-                        ctx.Saga.OrderId, ctx.Saga.CorrelationId, ctx.Message.Process);
+                        "Order {OrderId} [{CorrelationId}]: " +
+                        "{Process} notification completed",
+                        ctx.Saga.OrderId,
+                        ctx.Saga.CorrelationId,
+                        ctx.Message.Process);
                 })
-                .IfElse(ctx => IsNotificationFanOutComplete(ctx.Saga),
+
+                .IfElse(
+                    ctx => IsNotificationFanOutComplete(ctx.Saga),
+
+                    // -------------------------------------------------
+                    // ALL NOTIFICATIONS COMPLETED
+                    // -------------------------------------------------
                     done => done
-                          .Then(ctx =>
-                          {
-                              ctx.Saga.Status = "Completed";
-                          })
-                        .Then(ctx => _logger.LogInformation(
-                            "Order {OrderId} [{CorrelationId}]: Notification fan-out complete, finalizing",
-                            ctx.Saga.OrderId, ctx.Saga.CorrelationId))
+
+                        .Then(ctx =>
+                        {
+                            ctx.Saga.Status =
+                                "Completed";
+                        })
+
+                        .Then(ctx =>
+                            _logger.LogInformation(
+                                "Order {OrderId} [{CorrelationId}]: " +
+                                "Notification fan-out complete. " +
+                                "Finalizing saga",
+                                ctx.Saga.OrderId,
+                                ctx.Saga.CorrelationId))
+
+                        // This removes the saga row from SQL Server.
                         .Finalize(),
+
+                    // -------------------------------------------------
+                    // STILL WAITING FOR NOTIFICATIONS
+                    // -------------------------------------------------
                     pending => pending),
+
+            // Late / duplicate messages
             Ignore(InventoryChecked),
             Ignore(PaymentProcessed),
             Ignore(InventoryRetry.Received));
+    }
 
-        // Late/duplicate redeliveries after the saga has already finalized or dead-ended
-        // shouldn't crash the consumer — drop them.
-        During(Failed,
+    #endregion
+
+    #region Failed
+
+    private void ConfigureFailedState()
+    {
+        During(
+            Failed,
+
+            // Failed saga remains persisted.
+            //
+            // This allows:
+            // - operational investigation
+            // - admin dashboard
+            // - manual recovery
+            // - future retry/reprocessing
             Ignore(InventoryChecked),
             Ignore(PaymentProcessed),
             Ignore(OrderCreated),
-            Ignore(OrderConfirmedCompleted));
-
-        SetCompletedWhenFinalized();
+            Ignore(OrderConfirmedCompleted),
+            Ignore(InventoryRetry.Received));
     }
 
+    #endregion
+
+    #region Retry Helpers
+
     /// <summary>
-    /// Exponential backoff (x5 per attempt: 1m, 5m, 25m, 125m, ...), capped at <see cref="MaxRetryDelay"/> per step.
+    /// Calculates exponential inventory retry delay:
+    ///
+    /// Retry 1 = 1 minute
+    /// Retry 2 = 5 minutes
+    /// Retry 3 = 25 minutes
+    /// Retry 4 = 125 minutes
+    ///
+    /// The delay is capped at MaxRetryDelay.
     /// </summary>
-    private TimeSpan GetRetryDelay(int retryCount)
+    private static TimeSpan GetRetryDelay(int retryCount)
     {
         if (retryCount <= 1)
             return FirstRetryDelay;
@@ -328,96 +674,185 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
             if (delay >= MaxRetryDelay)
                 return MaxRetryDelay;
 
-            var nextTicks = delay.Ticks * BackoffFactor;
-
-            // Prevent overflow
-            if (nextTicks >= MaxRetryDelay.Ticks)
+            if (delay.Ticks >
+                MaxRetryDelay.Ticks / BackoffFactor)
+            {
                 return MaxRetryDelay;
+            }
 
-            delay = TimeSpan.FromTicks(nextTicks);
+            delay = TimeSpan.FromTicks(
+                delay.Ticks * BackoffFactor);
         }
 
-        return delay;
+        return delay > MaxRetryDelay
+            ? MaxRetryDelay
+            : delay;
     }
 
-    private bool IsRetryWindowExpired(OrderSagaState saga)
+    private static bool IsRetryWindowExpired(
+        OrderSagaState saga)
     {
         return saga.FirstUnavailableAt.HasValue &&
-               DateTime.UtcNow - saga.FirstUnavailableAt.Value >= MaxRetryWindow;
+               DateTimeOffset.UtcNow -
+               saga.FirstUnavailableAt.Value >=
+               MaxRetryWindow;
     }
 
-    // NotificationConsumer always publishes OrderConfirmedCompleted; Email/SMS/Paci
-    // consumers only publish it when their respective NotifyToX flag is enabled.
-    // The saga's Confirmed state waits for exactly the set of channels that were
-    // actually requested, so a disabled channel never blocks finalization.
-    private static bool IsNotificationFanOutComplete(OrderSagaState saga)
+    #endregion
+
+    #region Notification Completion
+
+    /// <summary>
+    /// Determines whether every required notification process
+    /// has completed.
+    ///
+    /// Email/SMS/PACI are conditional.
+    /// Notification is always required.
+    /// </summary>
+    private static bool IsNotificationFanOutComplete(
+        OrderSagaState saga)
     {
-        var notification = saga.OrderNotification;
+        var notification =
+            saga.OrderNotification;
+
+        // No notification configuration means
+        // nothing to wait for.
         if (notification is null)
             return true;
 
-        if (notification.NotifyToEmail && !notification.EmailSendStatus)
+        if (notification.NotifyToEmail &&
+            !notification.EmailSendStatus)
+        {
             return false;
-        if (notification.NotifyToSMS && !notification.SMSSendStatus)
-            return false;
-        if (notification.NotifyToPaci && !notification.PaciSendStatus)
-            return false;
+        }
 
-        // NotificationConsumer always fires (not gated by a NotifyToX flag) — its own
-        // completion must gate finalization the same way, or the saga can finalize
-        // before the always-on channel has run.
+        if (notification.NotifyToSMS &&
+            !notification.SMSSendStatus)
+        {
+            return false;
+        }
+
+        if (notification.NotifyToPaci &&
+            !notification.PaciSendStatus)
+        {
+            return false;
+        }
+
+        // Notification consumer is always required.
         if (!notification.NotificationSendStatus)
             return false;
 
         return true;
     }
 
-    private CheckInventory ToCheckInventory(OrderSagaState saga) => new()
-    {
-        CorrelationId = saga.CorrelationId,
-        Order = ToOrderDto(saga),
-    };
+    #endregion
 
-    private ProcessPayment ToProcessPayment(OrderSagaState saga) => new()
-    {
-        CorrelationId = saga.CorrelationId,
-        Order = ToOrderDto(saga),
-    };
+    #region Message Builders
 
-    private OrderConfirmed ToOrderConfirmed(OrderSagaState saga) => new()
+    private CheckInventory ToCheckInventory(
+        OrderSagaState saga)
     {
-        CorrelationId = saga.CorrelationId,
-        Order = ToOrderDto(saga),
-    };
-
-    private OrderDto ToOrderDto(OrderSagaState saga) => new()
-    {
-        Id = saga.OrderId,
-        CustomerName = saga.CustomerName,
-        OrderDate = saga.OrderDate,
-        TotalAmount = saga.TotalAmount,
-        Status = saga.Status,
-        OrderDetails = saga.OrderDetails.Select(d => new OrderDetailDto
+        return new CheckInventory
         {
-            Id = d.OrderDetailId,
-            OrderId = saga.OrderId,
-            ProductId = d.ProductId,
-            OrderQty = d.OrderQty,
-            UnitPrice = d.UnitPrice,
-            Total = d.Total,
-        }).ToList(),
+            CorrelationId = saga.CorrelationId,
+            Order = ToOrderDto(saga)
+        };
+    }
 
-        OrderNotification = saga.OrderNotification == null ? null : new OrderNotificationDto
+    private ProcessPayment ToProcessPayment(
+        OrderSagaState saga)
+    {
+        return new ProcessPayment
         {
-            Id = saga.OrderNotification.OrderNotificationId,
-            OrderId = saga.OrderId,
-            NotifyToEmail = saga.OrderNotification.NotifyToEmail,
-            NotifyToSMS = saga.OrderNotification.NotifyToSMS,
-            NotifyToPaci = saga.OrderNotification.NotifyToPaci,
-            EmailSendStatus = saga.OrderNotification.EmailSendStatus,
-            SMSSendStatus = saga.OrderNotification.SMSSendStatus,
-            PaciSendStatus = saga.OrderNotification.PaciSendStatus,
-            NotificationSendStatus = saga.OrderNotification.NotificationSendStatus
-        }
-    };
+            CorrelationId = saga.CorrelationId,
+            Order = ToOrderDto(saga)
+        };
+    }
+
+    private OrderConfirmed ToOrderConfirmed(
+        OrderSagaState saga)
+    {
+        return new OrderConfirmed
+        {
+            CorrelationId = saga.CorrelationId,
+            Order = ToOrderDto(saga)
+        };
+    }
+
+    private OrderDto ToOrderDto(
+        OrderSagaState saga)
+    {
+        return new OrderDto
+        {
+            Id = saga.OrderId,
+
+            CustomerName =
+                saga.CustomerName,
+
+            OrderDate =
+                saga.OrderDate,
+
+            TotalAmount =
+                saga.TotalAmount,
+
+            Status =
+                saga.Status,
+
+            OrderDetails =
+                saga.OrderDetails
+                    .Select(d => new OrderDetailDto
+                    {
+                        Id = d.OrderDetailId,
+                        OrderId = saga.OrderId,
+                        ProductId = d.ProductId,
+                        OrderQty = d.OrderQty,
+                        UnitPrice = d.UnitPrice,
+                        Total = d.Total
+                    })
+                    .ToList(),
+
+            OrderNotification =
+                saga.OrderNotification == null
+                    ? null
+                    : new OrderNotificationDto
+                    {
+                        Id =
+                            saga.OrderNotification
+                                .OrderNotificationId,
+
+                        OrderId =
+                            saga.OrderId,
+
+                        NotifyToEmail =
+                            saga.OrderNotification
+                                .NotifyToEmail,
+
+                        NotifyToSMS =
+                            saga.OrderNotification
+                                .NotifyToSMS,
+
+                        NotifyToPaci =
+                            saga.OrderNotification
+                                .NotifyToPaci,
+
+                        EmailSendStatus =
+                            saga.OrderNotification
+                                .EmailSendStatus,
+
+                        SMSSendStatus =
+                            saga.OrderNotification
+                                .SMSSendStatus,
+
+                        PaciSendStatus =
+                            saga.OrderNotification
+                                .PaciSendStatus,
+
+                        NotificationSendStatus =
+                            saga.OrderNotification
+                                .NotificationSendStatus
+                    }
+        };
+    }
+
+    #endregion
 }
