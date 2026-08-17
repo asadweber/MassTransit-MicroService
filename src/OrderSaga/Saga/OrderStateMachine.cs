@@ -1,6 +1,7 @@
 using Application.Dtos;
 using Application.Messaging.Command;
 using Application.Messaging.Events;
+using AutoMapper;
 using Infrastructure.Persistence;
 using MassTransit;
 
@@ -64,10 +65,12 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
 
 
     private readonly ILogger<OrderStateMachine> _logger;
+    private readonly IMapper _mapper;
 
-    public OrderStateMachine(ILogger<OrderStateMachine> logger)
+    public OrderStateMachine(ILogger<OrderStateMachine> logger, IMapper mapper)
     {
         _logger = logger;
+        _mapper = mapper;
 
         InstanceState(x => x.CurrentState);
 
@@ -83,16 +86,19 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
         Event(() => PaymentProcessed, x =>
             x.CorrelateById(ctx => ctx.Message.CorrelationId));
 
-        Event(
-           () => OrderConfirmedCompleted,
-           e =>
-           {
-               e.CorrelateById(context =>
-                   context.Message.CorrelationId);
+        Event(() => OrderConfirmedCompleted, x =>
+           x.CorrelateById(ctx => ctx.Message.CorrelationId));
 
-               e.OnMissingInstance(m =>
-                   m.Discard());
-           });
+        //Event(
+        //   () => OrderConfirmedCompleted,
+        //   e =>
+        //   {
+        //       e.CorrelateById(context =>
+        //           context.Message.CorrelationId);
+
+        //       e.OnMissingInstance(m =>
+        //           m.Discard());
+        //   });
 
         // Business-level retry for "not available yet" (no exception thrown), distinct from
         // transport-level UseMessageRetry/UseDelayedRedelivery which only handle faulted messages.
@@ -109,44 +115,19 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                 {
                     var order = ctx.Message.Order;
 
-                    var notification = order.OrderNotification;
+                    _mapper.Map(order, ctx.Saga);
 
+                    var correlationId = ctx.Saga.CorrelationId;
+                    foreach (var detail in ctx.Saga.OrderDetails)
+                        detail.OrderSagaStateCorrelationId = correlationId;
 
-                    ctx.Saga.OrderId = order.Id;
-                    ctx.Saga.CustomerName = order.CustomerName;
-                    ctx.Saga.OrderDate = order.OrderDate;
-                    ctx.Saga.TotalAmount = order.TotalAmount;
-                    ctx.Saga.Status = order.Status;
-                    ctx.Saga.OrderDetails = order.OrderDetails.Select(d => new SagaOrderDetail
-                    {
-                        OrderSagaStateCorrelationId = ctx.Saga.CorrelationId,
-                        ProductId = d.ProductId,
-                        OrderQty = d.OrderQty,
-                        UnitPrice = d.UnitPrice,
-                        Total = d.Total,
-                    }).ToList();
-                    ctx.Saga.OrderNotification = notification is null ? null
-                        : new SagaOrderNotification
-                        {
-                            Id= notification.Id,
-                            OrderSagaStateCorrelationId = ctx.Saga.CorrelationId,
-                            NotifyToEmail = notification.NotifyToEmail,
-                            NotifyToSMS = notification.NotifyToSMS,
-                            NotifyToPaci = notification.NotifyToPaci,
-                            // Initial completion state
-                            EmailSendStatus = notification.EmailSendStatus,
-                            SMSSendStatus = notification.SMSSendStatus,
-                            PaciSendStatus = notification.PaciSendStatus
-                        };
+                    if (ctx.Saga.OrderNotification is not null)
+                        ctx.Saga.OrderNotification.OrderSagaStateCorrelationId = correlationId;
 
                     Serilog.Context.LogContext.PushProperty("CorrelationId", ctx.Saga.CorrelationId);
                     Serilog.Context.LogContext.PushProperty("OrderId", ctx.Saga.OrderId);
                 })
-                .PublishAsync(ctx => ctx.Init<CheckInventory>(new CheckInventory
-                {
-                    CorrelationId = ctx.Saga.CorrelationId,
-                    Order = ToOrderDto(ctx.Saga),
-                }))
+                .PublishAsync(ctx => ctx.Init<CheckInventory>(ToCheckInventory(ctx.Saga)))
                 .TransitionTo(CheckingInventory)
                 .Then(ctx => _logger.LogInformation("OrderCreated -> CheckingInventory")));
 
@@ -162,11 +143,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                     Serilog.Context.LogContext.PushProperty("CorrelationId", ctx.Saga.CorrelationId);
                     Serilog.Context.LogContext.PushProperty("OrderId", ctx.Saga.OrderId);
                 })
-                .PublishAsync(ctx => ctx.Init<ProcessPayment>(new ProcessPayment
-                {
-                    CorrelationId = ctx.Saga.CorrelationId,
-                    Order = ToOrderDto(ctx.Saga),
-                }))
+                .PublishAsync(ctx => ctx.Init<ProcessPayment>(ToProcessPayment(ctx.Saga)))
                 .TransitionTo(ProcessingPayment)
                 .Then(ctx => _logger.LogInformation("InventoryChecked (available) -> ProcessingPayment")),
 
@@ -206,11 +183,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                             .Unschedule(InventoryRetry)
                             .Schedule(
                                 InventoryRetry,
-                                ctx => ctx.Init<CheckInventory>(new CheckInventory
-                                {
-                                    CorrelationId = ctx.Saga.CorrelationId,
-                                    Order = ToOrderDto(ctx.Saga),
-                                }),
+                                ctx => ctx.Init<CheckInventory>(ToCheckInventory(ctx.Saga)),
                                 ctx => ctx.Saga.NextInventoryRetryAt!.Value - DateTime.UtcNow)
                             .Then(ctx => _logger.LogInformation(
                                 "Order {OrderId} [{CorrelationId}]: Inventory unavailable. Retry #{RetryCount} scheduled for {NextRetry}.",
@@ -228,11 +201,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                 .Then(ctx => _logger.LogInformation(
                     "Order {OrderId} [{CorrelationId}]: InventoryRetry fired, re-checking inventory",
                     ctx.Saga.OrderId, ctx.Saga.CorrelationId))
-                .PublishAsync(ctx => ctx.Init<CheckInventory>(new CheckInventory
-                {
-                    CorrelationId = ctx.Saga.CorrelationId,
-                    Order = ToOrderDto(ctx.Saga),
-                })),
+                .PublishAsync(ctx => ctx.Init<CheckInventory>(ToCheckInventory(ctx.Saga))),
 
             // A PaymentProcessed reply shouldn't be possible here (ProcessPayment isn't
             // published until CheckingInventory resolves), but a duplicate/late-redelivered
@@ -240,19 +209,18 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
             // throwing UnhandledEventException.
             Ignore(PaymentProcessed));
 
-        // Payment resolves the saga: success confirms and finalizes, failure ends in Failed.
+        // Payment resolves the saga: success moves to Confirmed to await notification
+        // fan-out completion (Email/SMS/Paci/Notification), failure ends in Failed.
         During(ProcessingPayment,
             When(PaymentProcessed, x => x.Message.IsSuccess)
-                .PublishAsync(ctx => ctx.Init<OrderConfirmed>(new OrderConfirmed
-                {
-                    CorrelationId = ctx.Saga.CorrelationId,
-                    Order = ToOrderDto(ctx.Saga),
-                }))
+                .PublishAsync(ctx => ctx.Init<OrderConfirmed>(ToOrderConfirmed(ctx.Saga)))
                 .TransitionTo(Confirmed)
                 .Then(ctx => _logger.LogInformation(
                     "Order {OrderId} [{CorrelationId}]: PaymentProcessed (success) -> Confirmed",
                     ctx.Saga.OrderId, ctx.Saga.CorrelationId))
-                .Finalize(),
+                .IfElse(ctx => IsNotificationFanOutComplete(ctx.Saga),
+                    done => done.Finalize(),
+                    pending => pending),
 
             When(PaymentProcessed, x => !x.Message.IsSuccess)
                 .TransitionTo(Failed)
@@ -266,12 +234,51 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
             Ignore(InventoryChecked),
             Ignore(InventoryRetry.Received));
 
+        // Confirmed order waits for each enabled notification channel (plus the always-on
+        // NotificationConsumer) to report completion before finalizing the saga.
+        During(Confirmed,
+            When(OrderConfirmedCompleted)
+                .Then(ctx =>
+                {
+                    var notification = ctx.Saga.OrderNotification;
+                    if (notification is null)
+                        return;
+
+                    switch (ctx.Message.Process)
+                    {
+                        case OrderConfirmationProcess.Email:
+                            notification.EmailSendStatus = true;
+                            break;
+                        case OrderConfirmationProcess.SMS:
+                            notification.SMSSendStatus = true;
+                            break;
+                        case OrderConfirmationProcess.Paci:
+                            notification.PaciSendStatus = true;
+                            break;
+                    }
+
+                    _logger.LogInformation(
+                        "Order {OrderId} [{CorrelationId}]: {Process} completed",
+                        ctx.Saga.OrderId, ctx.Saga.CorrelationId, ctx.Message.Process);
+                })
+                .IfElse(ctx => IsNotificationFanOutComplete(ctx.Saga),
+                    done => done
+                        .Then(ctx => _logger.LogInformation(
+                            "Order {OrderId} [{CorrelationId}]: Notification fan-out complete, finalizing",
+                            ctx.Saga.OrderId, ctx.Saga.CorrelationId))
+                        .Finalize(),
+                    pending => pending),
+            Ignore(InventoryChecked),
+            Ignore(PaymentProcessed),
+            Ignore(InventoryRetry.Received));
+
         // Late/duplicate redeliveries after the saga has already finalized or dead-ended
         // shouldn't crash the consumer — drop them.
         During(Failed,
             Ignore(InventoryChecked),
             Ignore(PaymentProcessed),
-            Ignore(OrderCreated));
+            Ignore(OrderCreated),
+            Ignore(OrderConfirmedCompleted));
 
         SetCompletedWhenFinalized();
     }
@@ -308,6 +315,44 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
         return saga.FirstUnavailableAt.HasValue &&
                DateTime.UtcNow - saga.FirstUnavailableAt.Value >= MaxRetryWindow;
     }
+
+    // NotificationConsumer always publishes OrderConfirmedCompleted; Email/SMS/Paci
+    // consumers only publish it when their respective NotifyToX flag is enabled.
+    // The saga's Confirmed state waits for exactly the set of channels that were
+    // actually requested, so a disabled channel never blocks finalization.
+    private static bool IsNotificationFanOutComplete(OrderSagaState saga)
+    {
+        var notification = saga.OrderNotification;
+        if (notification is null)
+            return true;
+
+        if (notification.NotifyToEmail && !notification.EmailSendStatus)
+            return false;
+        if (notification.NotifyToSMS && !notification.SMSSendStatus)
+            return false;
+        if (notification.NotifyToPaci && !notification.PaciSendStatus)
+            return false;
+
+        return true;
+    }
+
+    private static CheckInventory ToCheckInventory(OrderSagaState saga) => new()
+    {
+        CorrelationId = saga.CorrelationId,
+        Order = ToOrderDto(saga),
+    };
+
+    private static ProcessPayment ToProcessPayment(OrderSagaState saga) => new()
+    {
+        CorrelationId = saga.CorrelationId,
+        Order = ToOrderDto(saga),
+    };
+
+    private static OrderConfirmed ToOrderConfirmed(OrderSagaState saga) => new()
+    {
+        CorrelationId = saga.CorrelationId,
+        Order = ToOrderDto(saga),
+    };
 
     private static OrderDto ToOrderDto(OrderSagaState saga) => new()
     {

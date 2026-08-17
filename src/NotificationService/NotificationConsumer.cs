@@ -18,6 +18,14 @@ public class NotificationConsumer(
         using var __ = Serilog.Context.LogContext.PushProperty("OrderId", msg.Order.Id);
 
         var order = await orderService.GetByIdAsync(msg.Order.Id);
+        if (order is null)
+        {
+            logger.LogWarning(
+                "Order {OrderId} [{CorrelationId}]: not found, skipping notification completion",
+                msg.Order.Id, msg.CorrelationId);
+            return;
+        }
+
         order.Status = "Complete";
         await orderService.UpdateAsync(msg.Order.Id, order);
 

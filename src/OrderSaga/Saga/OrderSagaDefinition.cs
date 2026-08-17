@@ -108,6 +108,13 @@ namespace OrderSaga.Saga
                     partitioner,
                     context => context.Message.CorrelationId);
             });
+
+            sagaConfigurator.Message<OrderConfirmedCompleted>(x =>
+            {
+                x.UsePartitioner(
+                    partitioner,
+                    context => context.Message.CorrelationId);
+            });
         }
     }
 }
