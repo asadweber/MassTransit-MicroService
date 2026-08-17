@@ -2,6 +2,8 @@ using Application;
 using Infrastructure;
 using Infrastructure.Persistence;
 using MassTransit;
+using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
 using OrderSaga.Saga;
 using Serilog;
 
@@ -56,6 +58,40 @@ builder.Services.AddMassTransit(x =>
 
         // Caps saga consumer throughput at 100 messages/sec across its auto-generated endpoint.
         cfg.UseRateLimit(400, TimeSpan.FromSeconds(1));
+
+        // Notification fan-out (Email/SMS/Paci/Notification) publishes up to 4
+        // OrderConfirmedCompleted events for the same saga near-simultaneously.
+        // With ConcurrencyMode.Optimistic, concurrent saga updates race on
+        // RowVersion — retry so a losing update reloads and reapplies instead
+        // of faulting and silently dropping the fan-out flag / Finalize call.
+        cfg.UseMessageRetry(retry =>
+        {
+            // SQL Server deadlock victim
+            retry.Handle<SqlException>(ex => ex.Number == 1205);
+
+            // SQL command timeout
+            retry.Handle<SqlException>(ex => ex.Number == -2);
+
+            // Lock request timeout
+            retry.Handle<SqlException>(ex => ex.Number == 1222);
+
+            // Could not acquire required database resources
+            retry.Handle<SqlException>(ex => ex.Number == 1204);
+
+            // EF optimistic concurrency conflict
+            retry.Handle<DbUpdateConcurrencyException>();
+
+            // Some EF operations wrap SqlException inside DbUpdateException
+            retry.Handle<DbUpdateException>(ex =>
+                ex.InnerException is SqlException sql &&
+                sql.Number is 1204 or 1205 or 1222 or -2);
+
+            retry.Exponential(
+                        retryLimit: 5,
+                        minInterval: TimeSpan.FromMilliseconds(200),
+                        maxInterval: TimeSpan.FromSeconds(5),
+                        intervalDelta: TimeSpan.FromMilliseconds(200));
+        });
 
         cfg.ConfigureEndpoints(ctx);
     });

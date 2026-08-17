@@ -4,6 +4,7 @@ using Application.Messaging.Events;
 using Infrastructure;
 using Infrastructure.Persistence;
 using MassTransit;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using PaymentService;
 using Serilog;
@@ -76,10 +77,33 @@ builder.Services.AddMassTransit(x =>
             // outer exponential policy sees the exception): EF Core optimistic-concurrency
             // conflicts are expected under load and resolve almost instantly, so intercept
             // and retry fast here instead of falling into the slower exponential policy.
-            e.UseMessageRetry(r =>
+            e.UseMessageRetry(retry =>
             {
-                r.Handle<DbUpdateConcurrencyException>();
-                r.Interval(10, TimeSpan.FromMilliseconds(100));
+                // SQL Server deadlock victim
+                retry.Handle<SqlException>(ex => ex.Number == 1205);
+
+                // SQL command timeout
+                retry.Handle<SqlException>(ex => ex.Number == -2);
+
+                // Lock request timeout
+                retry.Handle<SqlException>(ex => ex.Number == 1222);
+
+                // Could not acquire required database resources
+                retry.Handle<SqlException>(ex => ex.Number == 1204);
+
+                // EF optimistic concurrency conflict
+                retry.Handle<DbUpdateConcurrencyException>();
+
+                // Some EF operations wrap SqlException inside DbUpdateException
+                retry.Handle<DbUpdateException>(ex =>
+                    ex.InnerException is SqlException sql &&
+                    sql.Number is 1204 or 1205 or 1222 or -2);
+
+                retry.Exponential(
+                            retryLimit: 5,
+                            minInterval: TimeSpan.FromMilliseconds(200),
+                            maxInterval: TimeSpan.FromSeconds(5),
+                            intervalDelta: TimeSpan.FromMilliseconds(200));
             });
 
             // Trips after sustained failure (15% of a rolling 1-min window, min 10 attempts
