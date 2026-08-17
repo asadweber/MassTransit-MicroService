@@ -29,7 +29,7 @@ public class NotificationConsumer(
 
         order.Status = "Complete";
         await orderService.UpdateAsync(message.Order.Id, order);
-
+        message.Order.Status = "Complete";
 
         var notification = (await uow.OrderNotifications.FindAsync(n => n.OrderId == message.Order.Id))
             .FirstOrDefault();
