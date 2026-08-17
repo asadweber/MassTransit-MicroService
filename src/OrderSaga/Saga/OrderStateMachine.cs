@@ -421,6 +421,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
             // ---------------------------------------------------------
             // Late / duplicate messages
             // ---------------------------------------------------------
+            Ignore(OrderCreated),
             Ignore(PaymentProcessed),
             Ignore(OrderConfirmedCompleted));
     }
@@ -483,6 +484,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
             // ---------------------------------------------------------
             // LATE / DUPLICATE EVENTS
             // ---------------------------------------------------------
+            Ignore(OrderCreated),
             Ignore(InventoryChecked),
             Ignore(InventoryRetry.Received),
             Ignore(OrderConfirmedCompleted));
@@ -512,6 +514,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                 .Finalize(),
 
             // Late / duplicate messages
+            Ignore(OrderCreated),
             Ignore(InventoryChecked),
             Ignore(PaymentProcessed),
             Ignore(InventoryRetry.Received));
