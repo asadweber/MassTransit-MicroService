@@ -37,6 +37,7 @@ builder.Services.AddMassTransit(x =>
 
         // Pull more rows per poll — WebApp is the highest-volume publisher (OrderSimulator + API)
         o.QueryMessageLimit = rmqOptions.QueryMessageLimit;
+        o.QueryDelay = TimeSpan.FromSeconds(rmqOptions.QueryDelaySeconds);
 
         o.UseBusOutbox(bo =>
         {

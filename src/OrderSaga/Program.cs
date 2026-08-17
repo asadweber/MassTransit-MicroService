@@ -28,6 +28,7 @@ builder.Services.AddMassTransit(x =>
     {
         o.UseSqlServer();
         o.QueryMessageLimit = rmqOptions.QueryMessageLimit;
+        o.QueryDelay = TimeSpan.FromSeconds(rmqOptions.QueryDelaySeconds);
 
         o.UseBusOutbox(bo =>
         {

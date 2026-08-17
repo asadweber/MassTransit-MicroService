@@ -12,5 +12,6 @@ namespace Infrastructure
         public int MessageDeliveryLimit { get; set; } = 16;
         public int MessageDeliveryTimeoutSeconds { get; set; } = 30;
         public int QueryMessageLimit { get; set; } = 50;
+        public int QueryDelaySeconds { get; set; } = 1;
     }
 }
