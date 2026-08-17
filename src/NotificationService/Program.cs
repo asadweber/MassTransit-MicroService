@@ -34,10 +34,6 @@ builder.Services.AddMassTransit(x =>
     });
 
     x.AddConsumer<NotificationConsumer>();
-    x.AddConsumer<EmailSenderConsumer>();
-    x.AddConsumer<SMSSenderConsumer>();
-    x.AddConsumer<PaciSenderConsumer>();
-
 
     x.UsingRabbitMq((ctx, cfg) =>
     {
@@ -143,9 +139,6 @@ builder.Services.AddMassTransit(x =>
 
             // ✅ Consumers — always last
             e.ConfigureConsumer<NotificationConsumer>(ctx);
-            e.ConfigureConsumer<EmailSenderConsumer>(ctx);
-            e.ConfigureConsumer<SMSSenderConsumer>(ctx);
-            e.ConfigureConsumer<PaciSenderConsumer>(ctx);
         });
 
         cfg.ConfigureEndpoints(ctx);

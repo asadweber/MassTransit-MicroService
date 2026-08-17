@@ -18,8 +18,6 @@ namespace OrderSaga.Saga;
 ///     ↓
 /// Confirmed
 ///     ↓
-/// Notification fan-out
-///     ↓
 /// Finalize
 ///
 /// Failed business processes remain in the saga table for operational
@@ -72,7 +70,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
     /// <summary>
     /// Payment succeeded. Waiting for notification fan-out completion.
     /// </summary>
-    public State Confirmed { get; private set; } = null!;
+    public State PaymentConfirmed { get; private set; } = null!;
 
     /// <summary>
     /// Business process failed.
@@ -459,32 +457,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                     ctx.Init<OrderConfirmed>(
                         ToOrderConfirmed(ctx.Saga)))
 
-                .TransitionTo(Confirmed)
-
-                // If there are no notifications to wait for,
-                // finalize immediately.
-                .IfElse(
-                    ctx => IsNotificationFanOutComplete(ctx.Saga),
-
-                    done => done
-
-                        .Then(ctx =>
-                        {
-                            ctx.Saga.Status =
-                                "Completed";
-                        })
-
-                        .Then(ctx =>
-                            _logger.LogInformation(
-                                "Order {OrderId} [{CorrelationId}]: " +
-                                "No notification fan-out pending. " +
-                                "Finalizing saga",
-                                ctx.Saga.OrderId,
-                                ctx.Saga.CorrelationId))
-
-                        .Finalize(),
-
-                    pending => pending),
+                .TransitionTo(PaymentConfirmed),
 
             // ---------------------------------------------------------
             // PAYMENT FAILURE
@@ -522,57 +495,13 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
     private void ConfigureConfirmedState()
     {
         During(
-            Confirmed,
+            PaymentConfirmed,
 
             When(OrderConfirmedCompleted)
 
                 .Then(ctx =>
                 {
-
-                    var notification = ctx.Message.Order.OrderNotification;
-
-                    if (notification == null)
-                    {
-                        _logger.LogInformation(
-                            "Order {OrderId} [{CorrelationId}]: " +
-                            "Notification completion received, " +
-                            "but no notification configuration exists",
-                            ctx.Saga.OrderId,
-                            ctx.Saga.CorrelationId);
-
-                        return;
-                    }
-
-                    // The completion event itself means that
-                    // the specified process completed successfully.
-                    switch (ctx.Message.Process)
-                    {
-                        case OrderConfirmationProcess.Email:
-                            {
-                                ctx.Saga.Status = "Email Notification";
-                                ctx.Saga.OrderNotification.EmailSendStatus = notification.EmailSendStatus;
-                                break;
-                            }
-                        case OrderConfirmationProcess.SMS:
-                            {
-                                ctx.Saga.Status = "SMS Notification";
-                                ctx.Saga.OrderNotification.SMSSendStatus = notification.SMSSendStatus;
-                                break;
-                            }
-                        case OrderConfirmationProcess.Paci:
-                            {
-                                ctx.Saga.Status = "Paci Notification";
-                                ctx.Saga.OrderNotification.PaciSendStatus = notification.PaciSendStatus;
-                                break;
-                            }
-
-                        case OrderConfirmationProcess.Notification:
-                            {
-                                ctx.Saga.Status = "Notification";
-                                ctx.Saga.OrderNotification.NotificationSendStatus = notification.NotificationSendStatus;
-                                break;
-                            }
-                    }
+                    ctx.Saga.Status = "Completed";
 
                     _logger.LogInformation(
                         "Order {OrderId} [{CorrelationId}]: " +
@@ -581,36 +510,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                         ctx.Saga.CorrelationId,
                         ctx.Message.Process);
                 })
-
-                .IfElse(
-                    ctx => IsNotificationFanOutComplete(ctx.Saga),
-
-                    // -------------------------------------------------
-                    // ALL NOTIFICATIONS COMPLETED
-                    // -------------------------------------------------
-                    done => done
-
-                        .Then(ctx =>
-                        {
-                            ctx.Saga.Status =
-                                "Completed";
-                        })
-
-                        .Then(ctx =>
-                            _logger.LogInformation(
-                                "Order {OrderId} [{CorrelationId}]: " +
-                                "Notification fan-out complete. " +
-                                "Finalizing saga",
-                                ctx.Saga.OrderId,
-                                ctx.Saga.CorrelationId))
-
-                        // This removes the saga row from SQL Server.
-                        .Finalize(),
-
-                    // -------------------------------------------------
-                    // STILL WAITING FOR NOTIFICATIONS
-                    // -------------------------------------------------
-                    pending => pending),
+                .Finalize(),
 
             // Late / duplicate messages
             Ignore(InventoryChecked),
@@ -689,53 +589,6 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                DateTimeOffset.UtcNow -
                saga.FirstUnavailableAt.Value >=
                MaxRetryWindow;
-    }
-
-    #endregion
-
-    #region Notification Completion
-
-    /// <summary>
-    /// Determines whether every required notification process
-    /// has completed.
-    ///
-    /// Email/SMS/PACI are conditional.
-    /// Notification is always required.
-    /// </summary>
-    private static bool IsNotificationFanOutComplete(
-        OrderSagaState saga)
-    {
-        var notification =
-            saga.OrderNotification;
-
-        // No notification configuration means
-        // nothing to wait for.
-        if (notification is null)
-            return true;
-
-        if (notification.NotifyToEmail &&
-            !notification.EmailSendStatus)
-        {
-            return false;
-        }
-
-        if (notification.NotifyToSMS &&
-            !notification.SMSSendStatus)
-        {
-            return false;
-        }
-
-        if (notification.NotifyToPaci &&
-            !notification.PaciSendStatus)
-        {
-            return false;
-        }
-
-        // Notification consumer is always required.
-        if (!notification.NotificationSendStatus)
-            return false;
-
-        return true;
     }
 
     #endregion
