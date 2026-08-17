@@ -51,7 +51,7 @@ builder.Services.AddMassTransit(x =>
             e.ConcurrentMessageLimit = rmq.ConcurrentMessageLimit;
 
             // Caps consumer throughput at 400 messages/sec for this endpoint.
-            e.UseRateLimit(400, TimeSpan.FromSeconds(1));
+            e.UseRateLimit(rmq.RateLimit, TimeSpan.FromSeconds(1));
 
             // Outer policy — added first, so it wraps everything below: exponential
             // retry for real faults that survive the inner concurrency-specific retry.
