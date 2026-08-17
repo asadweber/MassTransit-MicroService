@@ -32,6 +32,7 @@ builder.Services.AddMassTransit(x =>
     {
         o.UseSqlServer();
 
+        /*
         // ✅ For publish-only: disable inbox cleanup (no consumers)
         o.DisableInboxCleanupService();
 
@@ -45,6 +46,7 @@ builder.Services.AddMassTransit(x =>
             bo.MessageDeliveryLimit = rmqOptions.MessageDeliveryLimit;
             bo.MessageDeliveryTimeout = TimeSpan.FromSeconds(rmqOptions.MessageDeliveryTimeoutSeconds);
         });
+        */
     });
 
     // RabbitMQ Transport

@@ -103,14 +103,12 @@ public class OrderSimulatorService(
 
         db.Orders.Add(order);
         await db.SaveChangesAsync(ct);
-
+        await tx.CommitAsync(ct);
+        
         // Publish writes to the outbox table via the same DbContext — must happen
         // before commit so the outbox row and the order insert commit atomically.
         OrderCreated message = new() { Order = mapper.Map<OrderDto>(order) };
         await bus.Publish(message, ct);
-
-        await db.SaveChangesAsync(ct);
-        await tx.CommitAsync(ct);
 
         logger.LogInformation(
             "Simulated order #{Id} for {Customer} — {Items} item(s), ${Total:F2}",
