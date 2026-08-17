@@ -5,7 +5,7 @@ using System.Text;
 
 namespace Application.Messaging.Events
 {
-    public record OrderConfirmedCompleted
+    public record NotificationCompleted
     {
         public Guid CorrelationId { get; init; }
 

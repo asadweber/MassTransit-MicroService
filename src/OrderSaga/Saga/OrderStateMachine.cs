@@ -100,7 +100,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
     /// <summary>
     /// Notification process completion event.
     /// </summary>
-    public Event<OrderConfirmedCompleted> OrderConfirmedCompleted
+    public Event<NotificationCompleted> OrderConfirmedCompleted
     {
         get;
         private set;

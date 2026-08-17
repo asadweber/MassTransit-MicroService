@@ -136,7 +136,7 @@ namespace OrderSaga.Saga
                     context => context.Message.CorrelationId);
             });
 
-            sagaConfigurator.Message<OrderConfirmedCompleted>(x =>
+            sagaConfigurator.Message<NotificationCompleted>(x =>
             {
                 x.UsePartitioner(
                     partitioner,

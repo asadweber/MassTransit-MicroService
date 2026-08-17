@@ -44,7 +44,7 @@ public class NotificationConsumer(
 
         //await Task.Delay(1000); // Simulate email sending delay
 
-        await context.Publish(new OrderConfirmedCompleted
+        await context.Publish(new NotificationCompleted
         {
             CorrelationId = message.CorrelationId,
             Order = message.Order,
