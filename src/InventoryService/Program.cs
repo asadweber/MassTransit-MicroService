@@ -1,6 +1,7 @@
 using Application.Messaging.Command;   // CheckInventory
 using Application;              // AddApplication DI extension
 using Infrastructure;           // AddInfrastructure DI extension
+using Infrastructure.Persistence; // AppDbContext (needed by EF outbox)
 using InventoryService;         // InventoryConsumer
 using MassTransit;              // bus, outbox, retry, RabbitMQ transport
 using Microsoft.EntityFrameworkCore;
@@ -21,11 +22,25 @@ builder.Services.AddInfrastructure(builder.Configuration);
 // Registers application-layer services (IOrderService, AutoMapper, etc.).
 builder.Services.AddApplication();
 
+var rmqOptions = builder.Configuration.GetSection("RabbitMQ").Get<RabbitMqOptions>()!;
 
 builder.Services.AddMassTransit(x =>
 {
     // Exposes bus/consumer metadata so WebApp's dashboard can show it.
     x.AddBusMetadataExplorer();
+
+    // EF Core Outbox — writes OutboxMessage row in same DbContext/transaction as any publish from here
+    x.AddEntityFrameworkOutbox<AppDbContext>(o =>
+    {
+        o.UseSqlServer();
+        o.QueryMessageLimit = rmqOptions.QueryMessageLimit;
+
+        o.UseBusOutbox(bo =>
+        {
+            bo.MessageDeliveryLimit = rmqOptions.MessageDeliveryLimit;
+            bo.MessageDeliveryTimeout = TimeSpan.FromSeconds(rmqOptions.MessageDeliveryTimeoutSeconds);
+        });
+    });
 
     // This service owns InventoryConsumer (registered in every service via
     x.AddConsumer<InventoryConsumer>();

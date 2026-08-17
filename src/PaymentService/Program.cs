@@ -19,10 +19,25 @@ builder.Services.AddSerilog(cfg => cfg.ReadFrom.Configuration(builder.Configurat
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApplication();
 
+var rmqOptions = builder.Configuration.GetSection("RabbitMQ").Get<RabbitMqOptions>()!;
 
 builder.Services.AddMassTransit(x =>
 {
     x.AddBusMetadataExplorer();
+
+    // EF Core Outbox — writes OutboxMessage row in same DbContext/transaction as any publish from here
+    x.AddEntityFrameworkOutbox<AppDbContext>(o =>
+    {
+        o.UseSqlServer();
+        o.QueryMessageLimit = rmqOptions.QueryMessageLimit;
+
+        o.UseBusOutbox(bo =>
+        {
+            bo.MessageDeliveryLimit = rmqOptions.MessageDeliveryLimit;
+            bo.MessageDeliveryTimeout = TimeSpan.FromSeconds(rmqOptions.MessageDeliveryTimeoutSeconds);
+        });
+    });
+
     x.AddConsumer<PaymentConsumer>();
 
 

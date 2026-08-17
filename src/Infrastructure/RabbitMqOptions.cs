@@ -9,5 +9,8 @@ namespace Infrastructure
         public ushort PrefetchCount { get; set; } = 32;
         public int ConcurrentMessageLimit { get; set; } = 16;
         public int RateLimit { get; set; } = 1000;
+        public int MessageDeliveryLimit { get; set; } = 50;
+        public int MessageDeliveryTimeoutSeconds { get; set; } = 30;
+        public int QueryMessageLimit { get; set; } = 50;
     }
 }
