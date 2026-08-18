@@ -53,7 +53,7 @@ public class OrderSimulatorService(
             {
                 try
                 {
-                    //await PlaceOrderAsync(products, stoppingToken);
+                    await PlaceOrderAsync(products, stoppingToken);
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
