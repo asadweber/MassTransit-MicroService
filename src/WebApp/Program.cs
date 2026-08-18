@@ -31,7 +31,14 @@ builder.Services.AddMassTransit(x =>
     x.AddEntityFrameworkOutbox<AppDbContext>(o =>
     {
         o.UseSqlServer();
-        o.UseBusOutbox();
+        o.QueryMessageLimit= rmqOptions.QueryMessageLimit;
+        o.QueryDelay = TimeSpan.FromSeconds(rmqOptions.QueryDelaySeconds);
+
+        o.UseBusOutbox(bo =>
+        {
+            bo.MessageDeliveryLimit = rmqOptions.MessageDeliveryLimit;
+            bo.MessageDeliveryTimeout = TimeSpan.FromSeconds(rmqOptions.MessageDeliveryTimeoutSeconds);
+        });
     });
 
     // RabbitMQ Transport
