@@ -19,9 +19,6 @@ public class OrderSimulatorService(
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        if (!config.GetValue("OrderSimulator:Enabled", true))
-            return;
-
         var interval = TimeSpan.FromSeconds(
             config.GetValue("OrderSimulator:IntervalSeconds", 3));
         var ordersPerTick = config.GetValue("OrderSimulator:OrdersPerTick", 1);
@@ -34,6 +31,9 @@ public class OrderSimulatorService(
 
         while (await timer.WaitForNextTickAsync(stoppingToken))
         {
+            if (!config.GetValue("OrderSimulator:Enabled", true))
+                continue;
+
             // Loaded once per tick instead of once per order — avoids re-querying
             // Products up to OrdersPerTick times per tick under higher simulator load.
             List<Product> products;
