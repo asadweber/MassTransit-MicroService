@@ -43,6 +43,11 @@ builder.Services.AddMassTransit(x =>
     // This service owns InventoryConsumer (registered in every service via
     x.AddConsumer<InventoryConsumer>();
 
+    // Registers IMessageScheduler in the container + the Hangfire consumers
+    // that turn schedule/unschedule commands into Hangfire jobs.
+    x.AddPublishMessageScheduler();
+    x.AddHangfireConsumers();
+
     x.UsingRabbitMq((ctx, cfg) =>
     {
         var rmq = ctx.GetRequiredService<RabbitMqOptions>();
@@ -56,9 +61,10 @@ builder.Services.AddMassTransit(x =>
         cfg.UseNewtonsoftJsonSerializer();
         cfg.UseNewtonsoftJsonDeserializer();
 
-        // Required for UseDelayedRedelivery below — schedules redelivery via Hangfire
-        // (SQL Server-backed), not the RabbitMQ delayed-exchange plugin.
-        cfg.UseHangfireScheduler();
+        // Required for UseDelayedRedelivery below — routes scheduled messages
+        // through the registered Hangfire (Redis-backed) scheduler instead of
+        // the RabbitMQ delayed-exchange plugin.
+        cfg.UsePublishMessageScheduler();
 
         // Manual endpoint — Inventory Service owns this queue.
         cfg.ReceiveEndpoint("inventory-queue", e =>

@@ -41,6 +41,11 @@ builder.Services.AddMassTransit(x =>
     x.AddConsumer<EmailNotificationConsumer>();
     x.AddConsumer<SmsNotificationConsumer>();
 
+    // Registers IMessageScheduler in the container + the Hangfire consumers
+    // that turn schedule/unschedule commands into Hangfire jobs.
+    x.AddPublishMessageScheduler();
+    x.AddHangfireConsumers();
+
     x.UsingRabbitMq((ctx, cfg) =>
     {
         var rmq = ctx.GetRequiredService<RabbitMqOptions>();
@@ -53,9 +58,10 @@ builder.Services.AddMassTransit(x =>
         cfg.UseNewtonsoftJsonSerializer();
         cfg.UseNewtonsoftJsonDeserializer();
 
-        // Required for UseDelayedRedelivery below — schedules redelivery via Hangfire
-        // (SQL Server-backed), not the RabbitMQ delayed-exchange plugin.
-        cfg.UseHangfireScheduler();
+        // Required for UseDelayedRedelivery below — routes scheduled messages
+        // through the registered Hangfire (Redis-backed) scheduler instead of
+        // the RabbitMQ delayed-exchange plugin.
+        cfg.UsePublishMessageScheduler();
 
 
         // Manual endpoint — Notification Service owns this queue

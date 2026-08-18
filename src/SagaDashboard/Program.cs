@@ -41,6 +41,11 @@ builder.Services.AddMassTransit(x =>
     x.AddConsumer<EmailNotificationConsumer>();
     x.AddConsumer<SmsNotificationConsumer>();
 
+    // Registers IMessageScheduler in the container + the Hangfire consumers
+    // that turn schedule/unschedule commands into Hangfire jobs.
+    x.AddPublishMessageScheduler();
+    x.AddHangfireConsumers();
+
     x.AddSagaStateMachine<OrderStateMachine, OrderSagaState, DashboardOnlySagaDefinition>()
         .EntityFrameworkRepository(r =>
         {
@@ -60,7 +65,7 @@ builder.Services.AddMassTransit(x =>
 
         cfg.UseNewtonsoftJsonSerializer();
         cfg.UseNewtonsoftJsonDeserializer();
-        cfg.UseHangfireScheduler();
+        cfg.UsePublishMessageScheduler();
 
         cfg.ConfigureEndpoints(ctx);
     });

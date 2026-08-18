@@ -37,6 +37,10 @@ builder.Services.AddHangfireServer();
 
 builder.Services.AddMassTransit(x =>
 {
+    // Registers IMessageScheduler in the container + the Hangfire consumers
+    // that turn schedule/unschedule commands into Hangfire jobs.
+    x.AddPublishMessageScheduler();
+    x.AddHangfireConsumers();
 
     x.AddSagaStateMachine<OrderStateMachine, OrderSagaState, OrderSagaDefinition>()
         .EntityFrameworkRepository(r =>
@@ -59,9 +63,10 @@ builder.Services.AddMassTransit(x =>
         cfg.UseNewtonsoftJsonSerializer();
         cfg.UseNewtonsoftJsonDeserializer();
 
-        // Required for saga Schedule()/Unschedule() (InventoryRetry) — schedules
-        // via Hangfire (Redis-backed), not the RabbitMQ delayed-exchange plugin.
-        cfg.UseHangfireScheduler();
+        // Required for saga Schedule()/Unschedule() (InventoryRetry) — routes
+        // scheduled messages through the registered Hangfire (Redis-backed)
+        // scheduler instead of the RabbitMQ delayed-exchange plugin.
+        cfg.UsePublishMessageScheduler();
 
         // Notification fan-out (Email/SMS/Paci/Notification) publishes up to 4
         // OrderConfirmedCompleted events for the same saga near-simultaneously.
