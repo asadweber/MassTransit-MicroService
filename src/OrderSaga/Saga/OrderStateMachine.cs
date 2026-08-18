@@ -468,7 +468,9 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                 // No channels requested (or no notification record at all) —
                 // nothing will ever raise NotificationCompleted, so finalize now.
                 .If(
-                    ctx => IsNotificationFanOutComplete(ctx.Saga),
+                    ctx => ctx.Saga.OrderNotification == null ||
+                        (!ctx.Saga.OrderNotification.NotifyToEmail || ctx.Saga.OrderNotification.EmailSendStatus) &&
+                        (!ctx.Saga.OrderNotification.NotifyToSMS || ctx.Saga.OrderNotification.SMSSendStatus),
                     both => both
                         .Then(ctx => ctx.Saga.Status = "Completed")
                         .Finalize()),
@@ -512,55 +514,18 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
         During(
             PaymentConfirmed,
 
-            // ---------------------------------------------------------
-            // Email channel done
-            // ---------------------------------------------------------
-            When(
-                NotificationCompleted,
-                x => x.Message.Process == NotificationProcess.Email)
-
+            When(NotificationCompleted)
                 .Then(ctx =>
                 {
-                    ctx.Saga.OrderNotification.EmailSendStatus = true;
-                    ctx.Saga.Status = "Email Notification Complete";
+                    ctx.Saga.Status = "Completed";
+
                     _logger.LogInformation(
                         "Order {OrderId} [{CorrelationId}]: " +
-                        "Email notification completed",
+                        "Notification completed",
                         ctx.Saga.OrderId,
                         ctx.Saga.CorrelationId);
                 })
-
-                .If(
-                    ctx => IsNotificationFanOutComplete(ctx.Saga),
-                    both => both
-                        .Then(ctx => ctx.Saga.Status = "Completed")
-                        .Finalize()),
-
-            // ---------------------------------------------------------
-            // SMS channel done
-            // ---------------------------------------------------------
-            When(
-                NotificationCompleted,
-                x => x.Message.Process == NotificationProcess.SMS)
-
-                .Then(ctx =>
-                {
-                    ctx.Saga.OrderNotification.SMSSendStatus = true;
-                    ctx.Saga.Status= "SMS Notification Completed";
-                    _logger.LogInformation(
-                        "Order {OrderId} [{CorrelationId}]: " +
-                        "SMS notification completed",
-                        ctx.Saga.OrderId,
-                        ctx.Saga.CorrelationId);
-                })
-
-                .If(
-                    ctx => IsNotificationFanOutComplete(ctx.Saga),
-                    both => both
-                        .Then(ctx => {
-                            ctx.Saga.Status = "Completed"; 
-                        })
-                        .Finalize()),
+                .Finalize(),
 
             // Late / duplicate messages
             Ignore(OrderCreated),
@@ -631,29 +596,6 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
         return delay > MaxRetryDelay
             ? MaxRetryDelay
             : delay;
-    }
-
-    /// <summary>
-    /// A channel is "done" if the customer never opted into it, or it opted
-    /// in and has since completed. Fan-out is complete when both channels
-    /// are done — so an order with only Email (or only SMS) enabled doesn't
-    /// wait forever on the channel it never requested.
-    /// </summary>
-    private static bool IsNotificationFanOutComplete(
-        OrderSagaState saga)
-    {
-        var notification = saga.OrderNotification;
-
-        if (notification is null)
-            return true;
-
-        var emailDone =
-            !notification.NotifyToEmail || notification.EmailSendStatus;
-
-        var smsDone =
-            !notification.NotifyToSMS || notification.SMSSendStatus;
-
-        return emailDone && smsDone;
     }
 
     private static bool IsRetryWindowExpired(

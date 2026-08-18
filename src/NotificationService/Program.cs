@@ -33,8 +33,7 @@ builder.Services.AddMassTransit(x =>
         o.UseSqlServer();
     });
 
-    x.AddConsumer<EmailNotificationConsumer>();
-    x.AddConsumer<SmsNotificationConsumer>();
+    x.AddConsumer<NotificationConsumer>();
 
     x.UsingRabbitMq((ctx, cfg) =>
     {
@@ -139,8 +138,7 @@ builder.Services.AddMassTransit(x =>
             e.UsePartitioner<OrderConfirmed>(partitioner, m => m.Message.CorrelationId);
 
             // ✅ Consumers — always last
-            e.ConfigureConsumer<EmailNotificationConsumer>(ctx);
-            e.ConfigureConsumer<SmsNotificationConsumer>(ctx);
+            e.ConfigureConsumer<NotificationConsumer>(ctx);
         });
 
         cfg.ConfigureEndpoints(ctx);

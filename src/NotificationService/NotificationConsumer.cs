@@ -8,8 +8,8 @@ using static MassTransit.Monitoring.Performance.BuiltInCounters;
 namespace NotificationService;
 
 [ExcludeFromConfigureEndpoints]
-public class EmailNotificationConsumer(
-    ILogger<EmailNotificationConsumer> logger,
+public class NotificationConsumer(
+    ILogger<NotificationConsumer> logger,
     IOrderService orderService, IUnitOfWork uow) : IConsumer<OrderConfirmed>
 {
     public async Task Consume(ConsumeContext<OrderConfirmed> context)
@@ -21,30 +21,41 @@ public class EmailNotificationConsumer(
         var notification = (await uow.OrderNotifications.FindAsync(n => n.OrderId == message.Order.Id))
             .FirstOrDefault();
 
-        if (notification is null || !notification.NotifyToEmail)
+        if (notification is null)
         {
             logger.LogInformation(
-                "Order {OrderId} [{CorrelationId}]: Email not requested, skipping",
+                "Order {OrderId} [{CorrelationId}]: No notification record, skipping",
                 message.Order.Id,
                 message.CorrelationId);
             return;
         }
 
-        // TODO: send email for real — stubbed as sent for now.
-        notification.EmailSendStatus = true;
+        if (notification.NotifyToEmail)
+        {
+            // TODO: send email for real — stubbed as sent for now.
+            notification.EmailSendStatus = true;
+        }
+
+        if (notification.NotifyToSMS)
+        {
+            // TODO: send SMS for real — stubbed as sent for now.
+            notification.SMSSendStatus = true;
+        }
+
         await uow.OrderNotifications.Update(notification);
         await uow.SaveChangesAsync();
+
 
         await context.Publish(new NotificationCompleted
         {
             CorrelationId = message.CorrelationId,
             Order = message.Order,
-            Process = NotificationProcess.Email
         });
 
         logger.LogInformation(
             "Order {OrderId} [{CorrelationId}]: Email notification completed",
             message.Order.Id,
             message.CorrelationId);
+
     }
 }
