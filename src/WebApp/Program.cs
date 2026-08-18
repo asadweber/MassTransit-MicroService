@@ -30,7 +30,19 @@ builder.Services.AddMassTransit(x =>
     // EF Core Outbox — writes OutboxMessage row in same DbContext/transaction as Order insert
     x.AddEntityFrameworkOutbox<AppDbContext>(o =>
     {
-        o.UseSqlServer();                
+        o.UseSqlServer();
+        // ✅ For publish-only: disable inbox cleanup (no consumers)
+        o.DisableInboxCleanupService();
+
+        // Pull more rows per poll — WebApp is the highest-volume publisher (OrderSimulator + API)
+        o.QueryMessageLimit = rmqOptions.QueryMessageLimit;
+
+        o.UseBusOutbox(bo =>
+        {
+            // Deliver more outbox messages concurrently per poll cycle (default 10)
+            bo.MessageDeliveryLimit = rmqOptions.MessageDeliveryLimit;
+            bo.MessageDeliveryTimeout = TimeSpan.FromSeconds(rmqOptions.MessageDeliveryTimeoutSeconds);
+        });
     });
 
     // RabbitMQ Transport
