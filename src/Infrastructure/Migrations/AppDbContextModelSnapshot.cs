@@ -100,11 +100,6 @@ namespace Infrastructure.Migrations
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
 
-                    b.Property<bool>("NotificationSendStatus")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(false);
-
                     b.Property<bool>("NotifyToEmail")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")

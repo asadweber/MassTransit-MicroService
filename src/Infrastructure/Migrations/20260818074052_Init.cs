@@ -74,12 +74,11 @@ namespace Infrastructure.Migrations
                     Id = table.Column<long>(type: "bigint", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     NotifyToEmail = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
-                    NotifyToSMS = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
-                    NotifyToPaci = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
                     EmailSendStatus = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
+                    NotifyToSMS = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
                     SMSSendStatus = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
+                    NotifyToPaci = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
                     PaciSendStatus = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
-                    NotificationSendStatus = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     OrderId = table.Column<long>(type: "bigint", nullable: false)
                 },
