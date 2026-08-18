@@ -53,7 +53,7 @@ public class OrderSimulatorService(
             {
                 try
                 {
-                    //await PlaceOrderAsync(products, stoppingToken);
+                    await PlaceOrderAsync(products, stoppingToken);
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
@@ -103,12 +103,13 @@ public class OrderSimulatorService(
 
         db.Orders.Add(order);
         await db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
+
         OrderCreated message = new() { Order = mapper.Map<OrderDto>(order) };
         await bus.Publish(message, ct);
-        await db.SaveChangesAsync(ct);
+        //await db.SaveChangesAsync(ct);
 
-        await tx.CommitAsync(ct);
-        
+
         logger.LogInformation(
             "Simulated order #{Id} for {Customer} — {Items} item(s), ${Total:F2}",
             order.Id, order.CustomerName, order.OrderDetails.Count, order.TotalAmount);

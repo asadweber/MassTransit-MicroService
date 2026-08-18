@@ -3,14 +3,13 @@ using Application.Messaging.Events;
 using Domain;
 using MassTransit;
 using Microsoft.Extensions.Logging;
-using static MassTransit.Monitoring.Performance.BuiltInCounters;
 
 namespace NotificationService;
 
 [ExcludeFromConfigureEndpoints]
-public class NotificationConsumer(
-    ILogger<NotificationConsumer> logger,
-    IOrderService orderService, IUnitOfWork uow) : IConsumer<OrderConfirmed>
+public class EmailNotificationConsumer(
+    ILogger<EmailNotificationConsumer> logger,
+    IUnitOfWork uow) : IConsumer<OrderConfirmed>
 {
     public async Task Consume(ConsumeContext<OrderConfirmed> context)
     {
@@ -21,32 +20,28 @@ public class NotificationConsumer(
         var notification = (await uow.OrderNotifications.FindAsync(n => n.OrderId == message.Order.Id))
             .FirstOrDefault();
 
-        if (notification is null)
+        if (notification is null || !notification.NotifyToEmail)
         {
             logger.LogInformation(
-                "Order {OrderId} [{CorrelationId}]: No notification record, skipping",
+                "Order {OrderId} [{CorrelationId}]: Email not requested, skipping",
                 message.Order.Id,
                 message.CorrelationId);
+
+            await context.Publish(new EmailNotificationSent
+            {
+                CorrelationId = message.CorrelationId,
+                Order = message.Order,
+            });
             return;
         }
 
-        if (notification.NotifyToEmail)
-        {
-            // TODO: send email for real — stubbed as sent for now.
-            notification.EmailSendStatus = true;
-        }
-
-        if (notification.NotifyToSMS)
-        {
-            // TODO: send SMS for real — stubbed as sent for now.
-            notification.SMSSendStatus = true;
-        }
+        // TODO: send email for real — stubbed as sent for now.
+        notification.EmailSendStatus = true;
 
         await uow.OrderNotifications.Update(notification);
         await uow.SaveChangesAsync();
 
-
-        await context.Publish(new NotificationCompleted
+        await context.Publish(new EmailNotificationSent
         {
             CorrelationId = message.CorrelationId,
             Order = message.Order,
@@ -56,6 +51,5 @@ public class NotificationConsumer(
             "Order {OrderId} [{CorrelationId}]: Email notification completed",
             message.Order.Id,
             message.CorrelationId);
-
     }
 }

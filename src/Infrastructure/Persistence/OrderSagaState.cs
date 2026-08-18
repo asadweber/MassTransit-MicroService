@@ -29,5 +29,9 @@ public class OrderSagaState : SagaStateMachineInstance, ISagaVersion
 
     public Guid? InventoryRetryTokenId { get; set; }
 
-
+    /// <summary>
+    /// Bitmask tracking which notification channels have completed, managed by
+    /// MassTransit's CompositeEvent (EmailNotificationSent / SmsNotificationSent).
+    /// </summary>
+    public int NotificationsCompleted { get; set; }
 }

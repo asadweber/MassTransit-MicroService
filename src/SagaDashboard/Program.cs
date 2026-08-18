@@ -30,7 +30,8 @@ builder.Services.AddMassTransit(x =>
 
     x.AddConsumer<InventoryConsumer>();
     x.AddConsumer<PaymentConsumer>();
-    x.AddConsumer<NotificationConsumer>();
+    x.AddConsumer<EmailNotificationConsumer>();
+    x.AddConsumer<SmsNotificationConsumer>();
 
     x.AddSagaStateMachine<OrderStateMachine, OrderSagaState, DashboardOnlySagaDefinition>()
         .EntityFrameworkRepository(r =>

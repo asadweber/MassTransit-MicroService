@@ -103,13 +103,20 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
     public Event<PaymentProcessed> PaymentProcessed { get; private set; } = null!;
 
     /// <summary>
-    /// Notification process completion event.
+    /// Email channel notification completed (sent, or opted out).
     /// </summary>
-    public Event<NotificationCompleted> NotificationCompleted
-    {
-        get;
-        private set;
-    } = null!;
+    public Event<EmailNotificationSent> EmailNotificationSent { get; private set; } = null!;
+
+    /// <summary>
+    /// SMS channel notification completed (sent, or opted out).
+    /// </summary>
+    public Event<SmsNotificationSent> SmsNotificationSent { get; private set; } = null!;
+
+    /// <summary>
+    /// Fires once both EmailNotificationSent and SmsNotificationSent have
+    /// been received for the current saga instance.
+    /// </summary>
+    public Event NotificationsCompleted { get; private set; } = null!;
 
     #endregion
 
@@ -179,11 +186,25 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                 context => context.Message.CorrelationId);
         });
 
-        Event(() => NotificationCompleted, x =>
+        Event(() => EmailNotificationSent, x =>
         {
             x.CorrelateById(
                 context => context.Message.CorrelationId);
         });
+
+        Event(() => SmsNotificationSent, x =>
+        {
+            x.CorrelateById(
+                context => context.Message.CorrelationId);
+        });
+
+        // Fires NotificationsCompleted once both channel events have arrived for
+        // this saga instance. Bit-state tracked in ctx.Saga.NotificationsCompleted.
+        CompositeEvent(
+            () => NotificationsCompleted,
+            x => x.NotificationsCompleted,
+            EmailNotificationSent,
+            SmsNotificationSent);
     }
 
     #endregion
@@ -428,7 +449,9 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
             // ---------------------------------------------------------
             Ignore(OrderCreated),
             Ignore(PaymentProcessed),
-            Ignore(NotificationCompleted));
+            Ignore(EmailNotificationSent),
+            Ignore(SmsNotificationSent),
+            Ignore(NotificationsCompleted));
     }
 
     #endregion
@@ -466,7 +489,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                 .TransitionTo(PaymentConfirmed)
 
                 // No channels requested (or no notification record at all) —
-                // nothing will ever raise NotificationCompleted, so finalize now.
+                // nothing will ever raise NotificationsCompleted, so finalize now.
                 .If(
                     ctx => ctx.Saga.OrderNotification == null ||
                         (!ctx.Saga.OrderNotification.NotifyToEmail || ctx.Saga.OrderNotification.EmailSendStatus) &&
@@ -502,7 +525,9 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
             Ignore(OrderCreated),
             Ignore(InventoryChecked),
             Ignore(InventoryRetry.Received),
-            Ignore(NotificationCompleted));
+            Ignore(EmailNotificationSent),
+            Ignore(SmsNotificationSent),
+            Ignore(NotificationsCompleted));
     }
 
     #endregion
@@ -514,14 +539,14 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
         During(
             PaymentConfirmed,
 
-            When(NotificationCompleted)
+            When(NotificationsCompleted)
                 .Then(ctx =>
                 {
                     ctx.Saga.Status = "Completed";
 
                     _logger.LogInformation(
                         "Order {OrderId} [{CorrelationId}]: " +
-                        "Notification completed",
+                        "Both notification channels completed",
                         ctx.Saga.OrderId,
                         ctx.Saga.CorrelationId);
                 })
@@ -553,7 +578,9 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
             Ignore(InventoryChecked),
             Ignore(PaymentProcessed),
             Ignore(OrderCreated),
-            Ignore(NotificationCompleted),
+            Ignore(EmailNotificationSent),
+            Ignore(SmsNotificationSent),
+            Ignore(NotificationsCompleted),
             Ignore(InventoryRetry.Received));
     }
 

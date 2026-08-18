@@ -136,7 +136,14 @@ namespace OrderSaga.Saga
                     context => context.Message.CorrelationId);
             });
 
-            sagaConfigurator.Message<NotificationCompleted>(x =>
+            sagaConfigurator.Message<EmailNotificationSent>(x =>
+            {
+                x.UsePartitioner(
+                    partitioner,
+                    context => context.Message.CorrelationId);
+            });
+
+            sagaConfigurator.Message<SmsNotificationSent>(x =>
             {
                 x.UsePartitioner(
                     partitioner,

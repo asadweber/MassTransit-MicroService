@@ -34,14 +34,15 @@ builder.Services.AddMassTransit(x =>
         o.QueryMessageLimit = rmqOptions.QueryMessageLimit;
         o.QueryDelay = TimeSpan.FromSeconds(rmqOptions.QueryDelaySeconds);
 
-        o.UseBusOutbox(bo =>
-        {
-            bo.MessageDeliveryLimit = rmqOptions.MessageDeliveryLimit;
-            bo.MessageDeliveryTimeout = TimeSpan.FromSeconds(rmqOptions.MessageDeliveryTimeoutSeconds);
-        });
+        //o.UseBusOutbox(bo =>
+        //{
+        //    bo.MessageDeliveryLimit = rmqOptions.MessageDeliveryLimit;
+        //    bo.MessageDeliveryTimeout = TimeSpan.FromSeconds(rmqOptions.MessageDeliveryTimeoutSeconds);
+        //});
     });
 
-    x.AddConsumer<NotificationConsumer>();
+    x.AddConsumer<EmailNotificationConsumer>();
+    x.AddConsumer<SmsNotificationConsumer>();
 
     x.UsingRabbitMq((ctx, cfg) =>
     {
@@ -145,8 +146,10 @@ builder.Services.AddMassTransit(x =>
             var partitioner = e.CreatePartitioner(e.ConcurrentMessageLimit!.Value);
             e.UsePartitioner<OrderConfirmed>(partitioner, m => m.Message.CorrelationId);
 
-            // ✅ Consumers — always last
-            e.ConfigureConsumer<NotificationConsumer>(ctx);
+            // ✅ Consumers — always last. Both consume OrderConfirmed and run in
+            // parallel; each publishes its own *Sent event for the saga's CompositeEvent.
+            e.ConfigureConsumer<EmailNotificationConsumer>(ctx);
+            e.ConfigureConsumer<SmsNotificationConsumer>(ctx);
         });
 
         cfg.ConfigureEndpoints(ctx);
