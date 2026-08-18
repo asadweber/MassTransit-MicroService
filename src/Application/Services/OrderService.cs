@@ -40,13 +40,10 @@ public class OrderService(IUnitOfWork uow, IPublishEndpoint bus, IMapper mapper)
         await uow.BeginTransactionAsync();
         await uow.Orders.AddAsync(order);
         await uow.SaveChangesAsync();                                    // 1) flush Order row, Id assigned
-        await uow.CommitAsync();                                         // both rows commit atomically
-
-
         OrderCreated message = new() { Order = mapper.Map<OrderDto>(order) };
         await bus.Publish(message);                                      // 2) writes OutboxMessage row via same DbContext
-
-
+        await uow.SaveChangesAsync();                                    // 1) flush Order row, Id assigned
+        await uow.CommitAsync();                                         // both rows commit atomically
 
         return mapper.Map<OrderDto>(order);
     }
