@@ -19,6 +19,15 @@ namespace OrderSaga.Saga
             IRegistrationContext context)
         {
 
+            // Inbox — dedupes redelivered saga events (InventoryChecked/PaymentProcessed/
+            // *NotificationSent) via InboxState, and defers outgoing publishes from the
+            // saga's EntityFrameworkRepository until its DbContext commits.
+            endpointConfigurator.UseEntityFrameworkOutbox<AppDbContext>(context, o =>
+            {
+                o.MessageDeliveryLimit = rabbitMqOptions.MessageDeliveryLimit;
+                o.MessageDeliveryTimeout = TimeSpan.FromSeconds(rabbitMqOptions.MessageDeliveryTimeoutSeconds);
+            });
+
             // Broker-level buffer: how many unacked messages RabbitMQ will push at once.
             // Kept at 2x ConcurrentMessageLimit, same ratio as the other 3 services.
             endpointConfigurator.PrefetchCount = rabbitMqOptions.PrefetchCount;
