@@ -96,7 +96,8 @@ public class OrderSagasController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> UpdateInFlight(Guid correlationId, OrderDto request, CancellationToken ct)
     {
-        var saga = await _db.OrderSagaStates.Include(s => s.OrderDetails)
+        var saga = await _db.OrderSagaStates
+            .Include(s => s.OrderDetails)
             .FirstOrDefaultAsync(s => s.CorrelationId == correlationId, ct);
         if (saga is null || saga.CurrentState != "CheckingInventory") return NotFound();
         if (saga.OrderId != request.Id) return NotFound();
