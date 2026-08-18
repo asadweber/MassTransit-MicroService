@@ -1,4 +1,6 @@
 using Application;
+using Hangfire;
+using Hangfire.Redis.StackExchange;
 using Infrastructure;
 using Infrastructure.Persistence;
 using MassTransit;
@@ -21,8 +23,21 @@ builder.Services.AddApplication();
 
 var rmqOptions = builder.Configuration.GetSection("RabbitMQ").Get<RabbitMqOptions>()!;
 
+// Hangfire backs MassTransit's delayed-message scheduler (saga Schedule()/
+// Unschedule() for InventoryRetry) via Redis storage instead of the RabbitMQ
+// delayed-exchange plugin — avoids depending on
+// rabbitmq_delayed_message_exchange being installed.
+var redisOptions = builder.Configuration.GetSection("Redis").Get<RedisOptions>()!;
+builder.Services.AddHangfire(cfg => cfg
+    .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+    .UseSimpleAssemblyNameTypeSerializer()
+    .UseRecommendedSerializerSettings()
+    .UseRedisStorage(redisOptions.ConnectionString));
+builder.Services.AddHangfireServer();
+
 builder.Services.AddMassTransit(x =>
 {
+
     x.AddSagaStateMachine<OrderStateMachine, OrderSagaState, OrderSagaDefinition>()
         .EntityFrameworkRepository(r =>
         {
@@ -44,9 +59,9 @@ builder.Services.AddMassTransit(x =>
         cfg.UseNewtonsoftJsonSerializer();
         cfg.UseNewtonsoftJsonDeserializer();
 
-        // Required for UseDelayedRedelivery below — schedules redelivery via the
-        // RabbitMQ delayed-exchange plugin (rabbitmq_delayed_message_exchange).
-        cfg.UseDelayedMessageScheduler();
+        // Required for saga Schedule()/Unschedule() (InventoryRetry) — schedules
+        // via Hangfire (Redis-backed), not the RabbitMQ delayed-exchange plugin.
+        cfg.UseHangfireScheduler();
 
         // Notification fan-out (Email/SMS/Paci/Notification) publishes up to 4
         // OrderConfirmedCompleted events for the same saga near-simultaneously.
@@ -81,6 +96,7 @@ builder.Services.AddMassTransit(x =>
                         maxInterval: TimeSpan.FromSeconds(5),
                         intervalDelta: TimeSpan.FromMilliseconds(200));
         });
+
 
         cfg.ConfigureEndpoints(ctx);
     });

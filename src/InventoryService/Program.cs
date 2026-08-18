@@ -2,6 +2,8 @@ using Application;              // AddApplication DI extension
 using Application.Messaging.Command;   // CheckInventory
 using Infrastructure;           // AddInfrastructure DI extension
 using Infrastructure.Persistence; // AppDbContext (needed by EF outbox)
+using Hangfire;
+using Hangfire.Redis.StackExchange;
 using InventoryService;         // InventoryConsumer
 using MassTransit;              // bus, outbox, retry, RabbitMQ transport
 using Microsoft.Data.SqlClient;
@@ -25,6 +27,17 @@ builder.Services.AddApplication();
 
 var rmqOptions = builder.Configuration.GetSection("RabbitMQ").Get<RabbitMqOptions>()!;
 
+// Hangfire backs MassTransit's delayed-message scheduler (redelivery, saga
+// Schedule()) via Redis storage instead of the RabbitMQ delayed-exchange
+// plugin — avoids depending on rabbitmq_delayed_message_exchange being installed.
+var redisOptions = builder.Configuration.GetSection("Redis").Get<RedisOptions>()!;
+builder.Services.AddHangfire(cfg => cfg
+    .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+    .UseSimpleAssemblyNameTypeSerializer()
+    .UseRecommendedSerializerSettings()
+    .UseRedisStorage(redisOptions.ConnectionString));
+builder.Services.AddHangfireServer();
+
 builder.Services.AddMassTransit(x =>
 {
     // This service owns InventoryConsumer (registered in every service via
@@ -43,9 +56,9 @@ builder.Services.AddMassTransit(x =>
         cfg.UseNewtonsoftJsonSerializer();
         cfg.UseNewtonsoftJsonDeserializer();
 
-        // Required for UseDelayedRedelivery below — schedules redelivery via the
-        // RabbitMQ delayed-exchange plugin (rabbitmq_delayed_message_exchange).
-        cfg.UseDelayedMessageScheduler();
+        // Required for UseDelayedRedelivery below — schedules redelivery via Hangfire
+        // (SQL Server-backed), not the RabbitMQ delayed-exchange plugin.
+        cfg.UseHangfireScheduler();
 
         // Manual endpoint — Inventory Service owns this queue.
         cfg.ReceiveEndpoint("inventory-queue", e =>

@@ -1,4 +1,6 @@
 using Application;
+using Hangfire;
+using Hangfire.Redis.StackExchange;
 using Infrastructure;
 using Infrastructure.Persistence;
 using InventoryService;
@@ -19,6 +21,17 @@ builder.Configuration.AddJsonFile(
 
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApplication();
+
+// Hangfire backs MassTransit's delayed-message scheduler via Redis storage
+// instead of the RabbitMQ delayed-exchange plugin — avoids depending on
+// rabbitmq_delayed_message_exchange being installed.
+var redisOptions = builder.Configuration.GetSection("Redis").Get<RedisOptions>()!;
+builder.Services.AddHangfire(cfg => cfg
+    .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+    .UseSimpleAssemblyNameTypeSerializer()
+    .UseRecommendedSerializerSettings()
+    .UseRedisStorage(redisOptions.ConnectionString));
+builder.Services.AddHangfireServer();
 
 // ── MassTransit — dashboard visibility only ─────────────────────────────────
 builder.Services.AddMassTransit(x =>
@@ -47,7 +60,7 @@ builder.Services.AddMassTransit(x =>
 
         cfg.UseNewtonsoftJsonSerializer();
         cfg.UseNewtonsoftJsonDeserializer();
-        cfg.UseDelayedMessageScheduler();
+        cfg.UseHangfireScheduler();
 
         cfg.ConfigureEndpoints(ctx);
     });
