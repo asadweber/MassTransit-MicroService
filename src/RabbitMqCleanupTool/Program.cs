@@ -37,6 +37,7 @@ string[] exchangePatterns =
     "inventory-queue",
     "payment-queue",
     "notification-queue",
+    "MassTransit:Fault"
 ];
 
 using var http = new HttpClient { BaseAddress = new Uri(managementUrl) };
