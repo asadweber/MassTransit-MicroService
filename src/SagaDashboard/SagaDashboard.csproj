@@ -8,6 +8,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="DashboardOnlySagaDefinition.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Content Include="..\..\appsettings.json" Link="appsettings.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>

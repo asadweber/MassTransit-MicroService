@@ -36,23 +36,6 @@ builder.Services.AddHangfireServer();
 // ── MassTransit — dashboard visibility only ─────────────────────────────────
 builder.Services.AddMassTransit(x =>
 {
-    //x.AddConsumer<InventoryConsumer>();
-    //x.AddConsumer<PaymentConsumer>();
-    //x.AddConsumer<EmailNotificationConsumer>();
-    //x.AddConsumer<SmsNotificationConsumer>();
-
-    // Registers IMessageScheduler in the container + the Hangfire consumers
-    // that turn schedule/unschedule commands into Hangfire jobs.
-    //x.AddPublishMessageScheduler();
-    //x.AddHangfireConsumers();
-
-    //x.AddSagaStateMachine<OrderStateMachine, OrderSagaState, DashboardOnlySagaDefinition>()
-    //    .EntityFrameworkRepository(r =>
-    //    {
-    //        r.ExistingDbContext<AppDbContext>();
-    //        r.ConcurrencyMode = ConcurrencyMode.Optimistic;
-    //    });
-
     x.UsingRabbitMq((ctx, cfg) =>
     {
         var rmq = ctx.GetRequiredService<RabbitMqOptions>();
@@ -65,7 +48,6 @@ builder.Services.AddMassTransit(x =>
 
         cfg.UseNewtonsoftJsonSerializer();
         cfg.UseNewtonsoftJsonDeserializer();
-        cfg.UsePublishMessageScheduler();
 
         cfg.ConfigureEndpoints(ctx);
     });
