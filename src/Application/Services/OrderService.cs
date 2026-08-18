@@ -59,7 +59,12 @@ public class OrderService(IUnitOfWork uow, IPublishEndpoint bus, IMapper mapper)
         var existing = await uow.Orders.GetByIdWithDetailsAsync(id);
         if (existing is null) return false;
 
+        // mapper.Map(OrderDto, Order) has no OrderNotification config, so a null
+        // request.OrderNotification would overwrite existing.OrderNotification and
+        // cascade-delete it on save. Preserve it around the map.
+        var notification = existing.OrderNotification;
         mapper.Map(request, existing);
+        existing.OrderNotification = notification;
 
         existing.OrderDetails.Clear();
         var newDetails = mapper.Map<List<OrderDetail>>(request.OrderDetails);
