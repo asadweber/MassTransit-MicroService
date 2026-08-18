@@ -29,7 +29,10 @@ namespace OrderSaga.Saga
             // touches means less contention to retry through under heavy load.
             endpointConfigurator.ConcurrentMessageLimit = rabbitMqOptions.ConcurrentMessageLimit;
 
-            
+            // Per-instance throughput cap (rabbitMqOptions.RateLimit msgs/sec on this endpoint).
+            // Scales linearly with instance count: N instances = N * RateLimit cluster-wide.
+            endpointConfigurator.UseRateLimit(rabbitMqOptions.RateLimit, TimeSpan.FromSeconds(1));
+
             if (endpointConfigurator is IRabbitMqReceiveEndpointConfigurator rabbitMqEndpointConfigurator)
             {
                 rabbitMqEndpointConfigurator.Durable = true;

@@ -64,9 +64,6 @@ builder.Services.AddMassTransit(x =>
         // RabbitMQ delayed-exchange plugin (rabbitmq_delayed_message_exchange).
         cfg.UseDelayedMessageScheduler();
 
-        // Caps saga consumer throughput at 100 messages/sec across its auto-generated endpoint.
-        cfg.UseRateLimit(rmq.RateLimit, TimeSpan.FromSeconds(1));
-
         // Notification fan-out (Email/SMS/Paci/Notification) publishes up to 4
         // OrderConfirmedCompleted events for the same saga near-simultaneously.
         // With ConcurrencyMode.Optimistic, concurrent saga updates race on
