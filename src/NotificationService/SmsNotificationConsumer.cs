@@ -20,26 +20,13 @@ public class SmsNotificationConsumer(
         var notification = (await uow.OrderNotifications.FindAsync(n => n.OrderId == message.Order.Id))
             .FirstOrDefault();
 
-        if (notification is null || !notification.NotifyToSMS)
+        if (notification is not null && notification.NotifyToSMS)
         {
-            logger.LogInformation(
-                "Order {OrderId} [{CorrelationId}]: SMS not requested, skipping",
-                message.Order.Id,
-                message.CorrelationId);
+            notification.SMSSendStatus = true;
 
-            await context.Publish(new SmsNotificationSent
-            {
-                CorrelationId = message.CorrelationId,
-                Order = message.Order,
-            });
-            return;
+            await uow.OrderNotifications.Update(notification);
+            await uow.SaveChangesAsync();
         }
-
-        // TODO: send SMS for real — stubbed as sent for now.
-        notification.SMSSendStatus = true;
-
-        await uow.OrderNotifications.Update(notification);
-        await uow.SaveChangesAsync();
 
         await context.Publish(new SmsNotificationSent
         {

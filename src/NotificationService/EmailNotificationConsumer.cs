@@ -20,26 +20,14 @@ public class EmailNotificationConsumer(
         var notification = (await uow.OrderNotifications.FindAsync(n => n.OrderId == message.Order.Id))
             .FirstOrDefault();
 
-        if (notification is null || !notification.NotifyToEmail)
+        if (notification is not null && notification.NotifyToEmail)
         {
-            logger.LogInformation(
-                "Order {OrderId} [{CorrelationId}]: Email not requested, skipping",
-                message.Order.Id,
-                message.CorrelationId);
+            notification.EmailSendStatus = true;
 
-            await context.Publish(new EmailNotificationSent
-            {
-                CorrelationId = message.CorrelationId,
-                Order = message.Order,
-            });
-            return;
+            await uow.OrderNotifications.Update(notification);
+            await uow.SaveChangesAsync();
         }
-
-        // TODO: send email for real — stubbed as sent for now.
-        notification.EmailSendStatus = true;
-
-        await uow.OrderNotifications.Update(notification);
-        await uow.SaveChangesAsync();
+       
 
         await context.Publish(new EmailNotificationSent
         {
