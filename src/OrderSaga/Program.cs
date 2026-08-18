@@ -29,7 +29,7 @@ builder.Services.AddMassTransit(x =>
     x.AddEntityFrameworkOutbox<AppDbContext>(o =>
     {
         o.UseSqlServer();
-
+        o.DisableInboxCleanupService();
         o.QueryMessageLimit = rmqOptions.QueryMessageLimit;
         o.QueryDelay = TimeSpan.FromSeconds(rmqOptions.QueryDelaySeconds);
 
