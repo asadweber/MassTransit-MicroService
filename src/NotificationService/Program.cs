@@ -38,6 +38,15 @@ builder.Services.AddHangfireServer();
 
 builder.Services.AddMassTransit(x =>
 {
+    // EF Core Outbox — writes OutboxMessage row in same DbContext/transaction as
+    // any publish from here, and UseEntityFrameworkOutbox below on the receive
+    // endpoint adds inbox-based idempotent consumption for both consumers.
+    x.AddEntityFrameworkOutbox<AppDbContext>(o =>
+    {
+        o.UseSqlServer();
+        o.UseBusOutbox();
+    });
+
     x.AddConsumer<EmailNotificationConsumer>();
     x.AddConsumer<SmsNotificationConsumer>();
 
@@ -148,6 +157,10 @@ builder.Services.AddMassTransit(x =>
             // even though ConcurrentMessageLimit allows 16 messages in parallel.
             var partitioner = e.CreatePartitioner(e.ConcurrentMessageLimit!.Value);
             e.UsePartitioner<OrderConfirmed>(partitioner, m => m.Message.CorrelationId);
+
+            // Inbox — dedupes redelivered messages via InboxState, and defers
+            // outgoing publishes from the consumer until its DbContext commits.
+            e.UseEntityFrameworkOutbox<AppDbContext>(ctx);
 
             // ✅ Consumers — always last. Both consume OrderConfirmed and run in
             // parallel; each publishes its own *Sent event for the saga's CompositeEvent.

@@ -40,6 +40,15 @@ builder.Services.AddHangfireServer();
 
 builder.Services.AddMassTransit(x =>
 {
+    // EF Core Outbox — writes OutboxMessage row in same DbContext/transaction as
+    // any publish from here, and UseEntityFrameworkOutbox below on the receive
+    // endpoint adds inbox-based idempotent consumption for InventoryConsumer.
+    x.AddEntityFrameworkOutbox<AppDbContext>(o =>
+    {
+        o.UseSqlServer();
+        o.UseBusOutbox();
+    });
+
     // This service owns InventoryConsumer (registered in every service via
     x.AddConsumer<InventoryConsumer>();
 
@@ -155,6 +164,10 @@ builder.Services.AddMassTransit(x =>
             // serialization protection against concurrent mutation of the same item.
             var partitioner = e.CreatePartitioner(e.ConcurrentMessageLimit!.Value);
             e.UsePartitioner<CheckInventory>(partitioner, m => m.Message.CorrelationId);
+
+            // Inbox — dedupes redelivered messages via InboxState, and defers
+            // outgoing publishes from the consumer until its DbContext commits.
+            e.UseEntityFrameworkOutbox<AppDbContext>(ctx);
 
             // Consumer — always configured last, innermost in the pipeline.
             e.ConfigureConsumer<InventoryConsumer>(ctx);

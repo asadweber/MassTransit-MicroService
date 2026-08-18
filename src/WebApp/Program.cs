@@ -25,6 +25,15 @@ var rmqOptions = builder.Configuration.GetSection("RabbitMQ").Get<RabbitMqOption
 // ── MassTransit(Publish - Only + EF Core Outbox) ────────────────────────────
 builder.Services.AddMassTransit(x =>
 {
+    // EF Core Outbox — writes OutboxMessage row in same DbContext/transaction as
+    // OrderService.CreateAsync's SaveChanges, so Publish only actually reaches
+    // RabbitMQ once that transaction commits (no dual-write between DB + bus).
+    x.AddEntityFrameworkOutbox<AppDbContext>(o =>
+    {
+        o.UseSqlServer();
+        o.UseBusOutbox();
+    });
+
     // RabbitMQ Transport
     x.UsingRabbitMq((ctx, cfg) =>
     {

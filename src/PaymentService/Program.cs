@@ -37,6 +37,15 @@ builder.Services.AddHangfireServer();
 
 builder.Services.AddMassTransit(x =>
 {
+    // EF Core Outbox — writes OutboxMessage row in same DbContext/transaction as
+    // any publish from here, and UseEntityFrameworkOutbox below on the receive
+    // endpoint adds inbox-based idempotent consumption for PaymentConsumer.
+    x.AddEntityFrameworkOutbox<AppDbContext>(o =>
+    {
+        o.UseSqlServer();
+        o.UseBusOutbox();
+    });
+
     x.AddConsumer<PaymentConsumer>();
 
     // Registers IMessageScheduler in the container + the Hangfire consumers
@@ -145,6 +154,9 @@ builder.Services.AddMassTransit(x =>
             var partitioner = e.CreatePartitioner(e.ConcurrentMessageLimit!.Value);
             e.UsePartitioner<ProcessPayment>(partitioner, m => m.Message.CorrelationId);
 
+            // Inbox — dedupes redelivered messages via InboxState, and defers
+            // outgoing publishes from the consumer until its DbContext commits.
+            e.UseEntityFrameworkOutbox<AppDbContext>(ctx);
 
             // ✅ Consumer — always last
             e.ConfigureConsumer<PaymentConsumer>(ctx);

@@ -37,6 +37,16 @@ builder.Services.AddHangfireServer();
 
 builder.Services.AddMassTransit(x =>
 {
+    // EF Core Outbox — writes OutboxMessage row in same DbContext/transaction as
+    // the saga's EntityFrameworkRepository SaveChanges, so state-transition
+    // publishes (CheckInventory/ProcessPayment/OrderConfirmed) only reach
+    // RabbitMQ once the saga's DB update actually commits.
+    x.AddEntityFrameworkOutbox<AppDbContext>(o =>
+    {
+        o.UseSqlServer();
+        o.UseBusOutbox();
+    });
+
     // Registers IMessageScheduler in the container + the Hangfire consumers
     // that turn schedule/unschedule commands into Hangfire jobs.
     x.AddPublishMessageScheduler();
