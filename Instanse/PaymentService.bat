@@ -1,2 +1,2 @@
-# PaymentService x3
-dotnet run --project src/PaymentService/PaymentService.csproj
+@echo off
+dotnet run --project ../src/PaymentService/PaymentService.csproj

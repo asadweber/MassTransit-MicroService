@@ -40,7 +40,8 @@ string[] exchangePatterns =
     "notification-queue",
     "MassTransit:Fault",
     "MassTransit.Scheduling",
-    "MassTransit:ReceiveFault"
+    "MassTransit:ReceiveFault",
+    "hangfire"
 ];
 
 using var http = new HttpClient { BaseAddress = new Uri(managementUrl) };

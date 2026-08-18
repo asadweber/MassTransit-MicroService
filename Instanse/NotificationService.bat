@@ -1,2 +1,2 @@
-# NotificationService x3
-dotnet run --project src/NotificationService/NotificationService.csproj
+@echo off
+dotnet run --project ../src/NotificationService/NotificationService.csproj
