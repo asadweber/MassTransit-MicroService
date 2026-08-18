@@ -274,7 +274,6 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                                 EmailSendStatus =notification.EmailSendStatus,
                                 SMSSendStatus =notification.SMSSendStatus,
                                 PaciSendStatus =notification.PaciSendStatus,
-                                NotificationSendStatus =notification.NotificationSendStatus
                             };
 
                     using var correlationScope =
@@ -705,40 +704,15 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                     ? null
                     : new OrderNotificationDto
                     {
-                        Id =
-                            saga.OrderNotification
-                                .OrderNotificationId,
+                        Id =saga.OrderNotification.OrderNotificationId,
+                        OrderId =saga.OrderId,
+                        NotifyToEmail =saga.OrderNotification.NotifyToEmail,
+                        NotifyToSMS =saga.OrderNotification.NotifyToSMS,
+                        NotifyToPaci =saga.OrderNotification.NotifyToPaci,
+                        EmailSendStatus =saga.OrderNotification.EmailSendStatus,
+                        SMSSendStatus =saga.OrderNotification.SMSSendStatus,
+                        PaciSendStatus =saga.OrderNotification.PaciSendStatus,
 
-                        OrderId =
-                            saga.OrderId,
-
-                        NotifyToEmail =
-                            saga.OrderNotification
-                                .NotifyToEmail,
-
-                        NotifyToSMS =
-                            saga.OrderNotification
-                                .NotifyToSMS,
-
-                        NotifyToPaci =
-                            saga.OrderNotification
-                                .NotifyToPaci,
-
-                        EmailSendStatus =
-                            saga.OrderNotification
-                                .EmailSendStatus,
-
-                        SMSSendStatus =
-                            saga.OrderNotification
-                                .SMSSendStatus,
-
-                        PaciSendStatus =
-                            saga.OrderNotification
-                                .PaciSendStatus,
-
-                        NotificationSendStatus =
-                            saga.OrderNotification
-                                .NotificationSendStatus
                     }
         };
     }

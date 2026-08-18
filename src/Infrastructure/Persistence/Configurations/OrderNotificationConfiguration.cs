@@ -18,7 +18,6 @@ public class OrderNotificationConfiguration : IEntityTypeConfiguration<OrderNoti
         builder.Property(n => n.EmailSendStatus).HasDefaultValue(false);
         builder.Property(n => n.SMSSendStatus).HasDefaultValue(false);
         builder.Property(n => n.PaciSendStatus).HasDefaultValue(false);
-        builder.Property(n => n.NotificationSendStatus).HasDefaultValue(false);
 
 
         builder.HasIndex(n => n.OrderId).IsUnique();
