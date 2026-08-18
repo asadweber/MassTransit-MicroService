@@ -27,9 +27,6 @@ var rmqOptions = builder.Configuration.GetSection("RabbitMQ").Get<RabbitMqOption
 
 builder.Services.AddMassTransit(x =>
 {
-    // Exposes bus/consumer metadata so WebApp's dashboard can show it.
-    x.AddBusMetadataExplorer();
-
     // EF Core Outbox — writes OutboxMessage row in same DbContext/transaction as any publish from here
     x.AddEntityFrameworkOutbox<AppDbContext>(o =>
     {

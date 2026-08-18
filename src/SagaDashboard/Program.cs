@@ -26,8 +26,6 @@ builder.Services.AddApplication();
 // so this project never actually consumes/duplicates message handling.
 builder.Services.AddMassTransit(x =>
 {
-    x.AddBusMetadataExplorer();
-
     x.AddConsumer<InventoryConsumer>();
     x.AddConsumer<PaymentConsumer>();
     x.AddConsumer<EmailNotificationConsumer>();
@@ -58,11 +56,6 @@ builder.Services.AddMassTransit(x =>
     });
 });
 
-builder.Services.AddMassTransitDashboard(options =>
-{
-    options.Metrics.Enabled = true;
-    options.Flow.Enabled = true;
-});
 
 builder.Services.AddControllersWithViews();
 
@@ -78,6 +71,5 @@ app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
-app.UseMassTransitDashboard();
 
 app.Run();

@@ -14,15 +14,28 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="MassTransit" Version="9.2.0-develop.150" />
-    <PackageReference Include="MassTransit.EntityFrameworkCore" Version="9.2.0-develop.150" />
-    <PackageReference Include="MassTransit.MongoDb" Version="9.2.0-develop.150" />
-    <PackageReference Include="MassTransit.Newtonsoft" Version="9.2.0-develop.150" />
-    <PackageReference Include="MassTransit.RabbitMQ" Version="9.2.0-develop.150" />    
+    <PackageReference Include="MassTransit" Version="8.3.4" />
+    <PackageReference Include="MassTransit.EntityFrameworkCore" Version="8.3.4" />
+    <PackageReference Include="MassTransit.MongoDb" Version="8.3.4" />
+    <PackageReference Include="MongoDB.Driver" Version="3.11.0" />
+    <!-- MassTransit.MongoDb 8.3.4 transitively pins the legacy split
+         MongoDB.Driver.Core/GridFS 2.30.0 packages. Those and the unified
+         MongoDB.Driver 3.x above both define MongoDB.Driver.MongoCommandException,
+         an unresolvable compile-time ambiguity (CS0433). Excluding all assets from
+         the legacy packages removes them from the build entirely — MassTransit's
+         MongoDB saga repository only needs the unified MongoDB.Driver 3.x types. -->
+    <PackageReference Include="MongoDB.Driver.Core" Version="2.30.0">
+      <ExcludeAssets>all</ExcludeAssets>
+    </PackageReference>
+    <PackageReference Include="MongoDB.Driver.GridFS" Version="2.30.0">
+      <ExcludeAssets>all</ExcludeAssets>
+    </PackageReference>
+    <PackageReference Include="MassTransit.Newtonsoft" Version="8.3.4" />
+    <PackageReference Include="MassTransit.RabbitMQ" Version="8.3.4" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.9" />
     <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
     <PackageReference Include="Serilog.Enrichers.Environment" Version="3.0.1" />
-    <PackageReference Include="Serilog.Sinks.MongoDB" Version="7.2.0" />
+    <PackageReference Include="Serilog.Sinks.MongoDB" Version="7.3.0" />
   </ItemGroup>
 
   <ItemGroup>

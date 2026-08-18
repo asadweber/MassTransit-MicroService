@@ -14,11 +14,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="MassTransit" Version="9.2.0-develop.150" />
-    <PackageReference Include="MassTransit.AspNetCore" Version="9.2.0-develop.150" />
-    <PackageReference Include="MassTransit.MongoDb" Version="9.2.0-develop.150" />
-    <PackageReference Include="MassTransit.Newtonsoft" Version="9.2.0-develop.150" />
-    <PackageReference Include="MassTransit.RabbitMQ" Version="9.2.0-develop.150" />
+    <PackageReference Include="MassTransit" Version="8.3.4" />
+    <PackageReference Include="MassTransit.MongoDb" Version="8.3.4" />
+    <PackageReference Include="MassTransit.Newtonsoft" Version="8.3.4" />
+    <PackageReference Include="MassTransit.RabbitMQ" Version="8.3.4" />
   </ItemGroup>
 
   <ItemGroup>
