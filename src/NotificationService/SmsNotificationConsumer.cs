@@ -17,16 +17,16 @@ public class SmsNotificationConsumer(
         using var _ = Serilog.Context.LogContext.PushProperty("CorrelationId", message.CorrelationId);
         using var __ = Serilog.Context.LogContext.PushProperty("OrderId", message.Order.Id);
 
-        //var notification = (await uow.OrderNotifications.FindAsync(n => n.OrderId == message.Order.Id))
-        //    .FirstOrDefault();
+        var notification = (await uow.OrderNotifications.FindAsync(n => n.OrderId == message.Order.Id))
+            .FirstOrDefault();
 
-        //if (notification is not null && notification.NotifyToSMS)
-        //{
-        //    notification.SMSSendStatus = true;
+        if (notification is not null && notification.NotifyToSMS)
+        {
+            notification.SMSSendStatus = true;
 
-        //    await uow.OrderNotifications.Update(notification);
-        //    await uow.SaveChangesAsync();
-        //}
+            await uow.OrderNotifications.Update(notification);
+            await uow.SaveChangesAsync();
+        }
 
         await context.Publish(new SmsNotificationSent
         {
