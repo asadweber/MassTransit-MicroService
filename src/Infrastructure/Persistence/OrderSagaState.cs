@@ -19,9 +19,6 @@ public class OrderSagaState : SagaStateMachineInstance, ISagaVersion
 
     public List<SagaOrderDetail> OrderDetails { get; set; } = [];
 
-    public SagaOrderNotification? OrderNotification { get; set; }
-
-
     public DateTime? FirstUnavailableAt { get; set; }
     public DateTime? NextInventoryRetryAt { get; set; }
 

@@ -30,7 +30,7 @@ builder.Services.AddMassTransit(x =>
     // EF Core Outbox — writes OutboxMessage row in same DbContext/transaction as Order insert
     x.AddEntityFrameworkOutbox<AppDbContext>(o =>
     {
-        o.UseSqlServer();
+        o.UseSqlServer();        
     });
 
     // RabbitMQ Transport

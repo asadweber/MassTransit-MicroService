@@ -261,21 +261,6 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                             })
                             .ToList();
 
-                    ctx.Saga.OrderNotification =
-                        notification == null
-                            ? null
-                            : new SagaOrderNotification
-                            {
-                                OrderNotificationId = notification.Id,
-                                OrderSagaStateCorrelationId =correlationId,
-                                NotifyToEmail =notification.NotifyToEmail,
-                                NotifyToSMS =notification.NotifyToSMS,
-                                NotifyToPaci =notification.NotifyToPaci,
-                                EmailSendStatus =notification.EmailSendStatus,
-                                SMSSendStatus =notification.SMSSendStatus,
-                                PaciSendStatus =notification.PaciSendStatus,
-                            };
-
                     using var correlationScope =
                         Serilog.Context.LogContext.PushProperty(
                             "CorrelationId",
@@ -485,17 +470,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                     ctx.Init<OrderConfirmed>(
                         ToOrderConfirmed(ctx.Saga)))
 
-                .TransitionTo(PaymentConfirmed)
-
-                // No channels requested (or no notification record at all) —
-                // nothing will ever raise NotificationsCompleted, so finalize now.
-                .If(
-                    ctx => ctx.Saga.OrderNotification == null ||
-                        (!ctx.Saga.OrderNotification.NotifyToEmail || ctx.Saga.OrderNotification.EmailSendStatus) &&
-                        (!ctx.Saga.OrderNotification.NotifyToSMS || ctx.Saga.OrderNotification.SMSSendStatus),
-                    both => both
-                        .Then(ctx => ctx.Saga.Status = "Completed")
-                        .Finalize()),
+                .TransitionTo(PaymentConfirmed),
 
             // ---------------------------------------------------------
             // PAYMENT FAILURE
@@ -699,21 +674,6 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                     })
                     .ToList(),
 
-            OrderNotification =
-                saga.OrderNotification == null
-                    ? null
-                    : new OrderNotificationDto
-                    {
-                        Id =saga.OrderNotification.OrderNotificationId,
-                        OrderId =saga.OrderId,
-                        NotifyToEmail =saga.OrderNotification.NotifyToEmail,
-                        NotifyToSMS =saga.OrderNotification.NotifyToSMS,
-                        NotifyToPaci =saga.OrderNotification.NotifyToPaci,
-                        EmailSendStatus =saga.OrderNotification.EmailSendStatus,
-                        SMSSendStatus =saga.OrderNotification.SMSSendStatus,
-                        PaciSendStatus =saga.OrderNotification.PaciSendStatus,
-
-                    }
         };
     }
 
