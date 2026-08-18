@@ -65,7 +65,7 @@ builder.Services.AddMassTransit(x =>
         cfg.UseDelayedMessageScheduler();
 
         // Caps saga consumer throughput at 100 messages/sec across its auto-generated endpoint.
-        cfg.UseRateLimit(400, TimeSpan.FromSeconds(1));
+        cfg.UseRateLimit(rmq.RateLimit, TimeSpan.FromSeconds(1));
 
         // Notification fan-out (Email/SMS/Paci/Notification) publishes up to 4
         // OrderConfirmedCompleted events for the same saga near-simultaneously.
