@@ -134,17 +134,11 @@ builder.Services.AddMassTransit(x =>
                             intervalDelta: TimeSpan.FromMilliseconds(200));
             });
 
-            // Trips after sustained failure (15% of a rolling 1-min window, min 10 attempts
-            // evaluated) so a struggling downstream dependency doesn't get hammered further —
-            // rejects fast instead of queuing more retries. Half-open probe after 5 min.
-            e.UseCircuitBreaker(cb =>
-            {
-                cb.TrackingPeriod = TimeSpan.FromMinutes(1);
-                cb.TripThreshold = 15;
-                cb.ActiveThreshold = 10;
-                cb.ResetInterval = TimeSpan.FromMinutes(5);
-            });
-
+            // Innermost of the two: scheduled redelivery of consumer failures. Placed
+            // before (inside) the circuit breaker so breaker stats only see messages
+            // that exhausted redelivery, not routine scheduled-retry churn — otherwise
+            // a stretch of transient failures trips the breaker via retry noise instead
+            // of genuine sustained failure.
             e.UseDelayedRedelivery(r =>
             {
                 r.Intervals(
@@ -157,6 +151,17 @@ builder.Services.AddMassTransit(x =>
                     TimeSpan.FromDays(1),
                     TimeSpan.FromDays(3),
                     TimeSpan.FromDays(7));
+            });
+
+            // Trips after sustained failure (15% of a rolling 1-min window, min 10 attempts
+            // evaluated) so a struggling downstream dependency doesn't get hammered further —
+            // rejects fast instead of queuing more retries. Half-open probe after 5 min.
+            e.UseCircuitBreaker(cb =>
+            {
+                cb.TrackingPeriod = TimeSpan.FromMinutes(1);
+                cb.TripThreshold = 15;
+                cb.ActiveThreshold = 10;
+                cb.ResetInterval = TimeSpan.FromMinutes(5);
             });
 
             // Keeps messages for the same order (CorrelationId) processed in order,
