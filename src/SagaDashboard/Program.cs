@@ -21,37 +21,37 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApplication();
 
 // ── MassTransit — dashboard visibility only ─────────────────────────────────
-//builder.Services.AddMassTransit(x =>
-//{
-//    x.AddConsumer<InventoryConsumer>();
-//    x.AddConsumer<PaymentConsumer>();
-//    x.AddConsumer<EmailNotificationConsumer>();
-//    x.AddConsumer<SmsNotificationConsumer>();
+builder.Services.AddMassTransit(x =>
+{
+    x.AddConsumer<InventoryConsumer>();
+    x.AddConsumer<PaymentConsumer>();
+    x.AddConsumer<EmailNotificationConsumer>();
+    x.AddConsumer<SmsNotificationConsumer>();
 
-//    x.AddSagaStateMachine<OrderStateMachine, OrderSagaState, DashboardOnlySagaDefinition>()
-//        .EntityFrameworkRepository(r =>
-//        {
-//            r.ExistingDbContext<AppDbContext>();
-//            r.ConcurrencyMode = ConcurrencyMode.Optimistic;
-//        });
+    x.AddSagaStateMachine<OrderStateMachine, OrderSagaState, DashboardOnlySagaDefinition>()
+        .EntityFrameworkRepository(r =>
+        {
+            r.ExistingDbContext<AppDbContext>();
+            r.ConcurrencyMode = ConcurrencyMode.Optimistic;
+        });
 
-//    x.UsingRabbitMq((ctx, cfg) =>
-//    {
-//        var rmq = ctx.GetRequiredService<RabbitMqOptions>();
+    x.UsingRabbitMq((ctx, cfg) =>
+    {
+        var rmq = ctx.GetRequiredService<RabbitMqOptions>();
 
-//        cfg.Host(rmq.Host, rmq.VirtualHost, h =>
-//        {
-//            h.Username(rmq.Username);
-//            h.Password(rmq.Password);
-//        });
+        cfg.Host(rmq.Host, rmq.VirtualHost, h =>
+        {
+            h.Username(rmq.Username);
+            h.Password(rmq.Password);
+        });
 
-//        cfg.UseNewtonsoftJsonSerializer();
-//        cfg.UseNewtonsoftJsonDeserializer();
-//        cfg.UseDelayedMessageScheduler();
+        cfg.UseNewtonsoftJsonSerializer();
+        cfg.UseNewtonsoftJsonDeserializer();
+        cfg.UseDelayedMessageScheduler();
 
-//        cfg.ConfigureEndpoints(ctx);
-//    });
-//});
+        cfg.ConfigureEndpoints(ctx);
+    });
+});
 
 
 builder.Services.AddControllersWithViews();
