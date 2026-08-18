@@ -65,7 +65,7 @@ builder.Services.AddMassTransit(x =>
             e.PrefetchCount = rmq.PrefetchCount;
             e.ConcurrentMessageLimit = rmq.ConcurrentMessageLimit;
 
-            // Caps consumer throughput at 400 messages/sec for this endpoint.
+            // Per-instance throughput cap (rmq.RateLimit msgs/sec on this endpoint).
             e.UseRateLimit(rmq.RateLimit, TimeSpan.FromSeconds(1));
 
             // Outer policy — added first, so it wraps everything below: exponential
