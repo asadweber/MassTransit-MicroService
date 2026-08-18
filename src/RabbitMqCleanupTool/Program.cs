@@ -27,6 +27,7 @@ string[] queuePatterns =
     "payment-queue",
     "notification-queue",
     "OrderSagaState",
+    "hangfire"
 ];
 
 string[] exchangePatterns =

@@ -82,6 +82,10 @@ app.UseRouting();
 
 app.UseAuthorization();
 
+// Job dashboard for the Hangfire-backed MassTransit scheduler (Redis storage).
+// Local-only by default; DashboardOptions.Authorization enforces that.
+app.UseHangfireDashboard("/hangfire");
+
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
