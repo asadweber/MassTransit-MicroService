@@ -46,12 +46,12 @@ builder.Services.AddMassTransit(x =>
     x.AddPublishMessageScheduler();
     x.AddHangfireConsumers();
 
-    x.AddSagaStateMachine<OrderStateMachine, OrderSagaState, DashboardOnlySagaDefinition>()
-        .EntityFrameworkRepository(r =>
-        {
-            r.ExistingDbContext<AppDbContext>();
-            r.ConcurrencyMode = ConcurrencyMode.Optimistic;
-        });
+    //x.AddSagaStateMachine<OrderStateMachine, OrderSagaState, DashboardOnlySagaDefinition>()
+    //    .EntityFrameworkRepository(r =>
+    //    {
+    //        r.ExistingDbContext<AppDbContext>();
+    //        r.ConcurrencyMode = ConcurrencyMode.Optimistic;
+    //    });
 
     x.UsingRabbitMq((ctx, cfg) =>
     {
