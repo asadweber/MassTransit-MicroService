@@ -173,7 +173,11 @@ builder.Services.AddMassTransit(x =>
 
             // Inbox — dedupes redelivered messages via InboxState, and defers
             // outgoing publishes from the consumer until its DbContext commits.
-            e.UseEntityFrameworkOutbox<AppDbContext>(ctx);
+            e.UseEntityFrameworkOutbox<AppDbContext>(ctx, o =>
+            {
+                o.MessageDeliveryLimit = rmqOptions.MessageDeliveryLimit;
+                o.MessageDeliveryTimeout = TimeSpan.FromSeconds(rmqOptions.MessageDeliveryTimeoutSeconds);
+            });
 
             // Consumer — always configured last, innermost in the pipeline.
             e.ConfigureConsumer<InventoryConsumer>(ctx);
