@@ -27,20 +27,6 @@ var rmqOptions = builder.Configuration.GetSection("RabbitMQ").Get<RabbitMqOption
 
 builder.Services.AddMassTransit(x =>
 {
-    // EF Core Outbox — writes OutboxMessage row in same DbContext/transaction as any publish from here
-    //x.AddEntityFrameworkOutbox<AppDbContext>(o =>
-    //{
-    //    o.UseSqlServer();
-    //    o.QueryMessageLimit = rmqOptions.QueryMessageLimit;
-    //    o.QueryDelay = TimeSpan.FromSeconds(rmqOptions.QueryDelaySeconds);
-
-    //    o.UseBusOutbox(bo =>
-    //    {
-    //        bo.MessageDeliveryLimit = rmqOptions.MessageDeliveryLimit;
-    //        bo.MessageDeliveryTimeout = TimeSpan.FromSeconds(rmqOptions.MessageDeliveryTimeoutSeconds);
-    //    });
-    //});
-
     // This service owns InventoryConsumer (registered in every service via
     x.AddConsumer<InventoryConsumer>();
 
