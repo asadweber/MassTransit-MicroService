@@ -21,5 +21,6 @@ namespace Infrastructure
         // tears it down so pending operations fail fast instead of hanging.
         public double HeartbeatSeconds { get; set; } = 10;
         public double RequestedConnectionTimeoutSeconds { get; set; } = 15;
+        public double QueryTimeoutSeconds { get; set; } = 30;
     }
 }

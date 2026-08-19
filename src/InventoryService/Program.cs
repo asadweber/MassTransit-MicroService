@@ -69,6 +69,7 @@ builder.Services.AddMassTransit(x =>
         o.UseSqlServer();
         o.QueryMessageLimit = rmqOptions.QueryMessageLimit;
         o.QueryDelay = TimeSpan.FromSeconds(rmqOptions.QueryDelaySeconds);
+        o.QueryTimeout = TimeSpan.FromSeconds(rmqOptions.QueryTimeoutSeconds);
 
         // InboxCleanupService's periodic DELETE was contending with live
         // consumer traffic on InboxState and hitting SQL error 1205 (deadlock
@@ -76,6 +77,7 @@ builder.Services.AddMassTransit(x =>
         // so this isolation level uses row versioning instead of shared locks,
         // letting cleanup reads/deletes stop blocking consumer writes.
         o.IsolationLevel = System.Data.IsolationLevel.ReadCommitted;        
+       
         o.UseBusOutbox(bo =>
         {
             bo.MessageDeliveryLimit = rmqOptions.MessageDeliveryLimit;
