@@ -46,7 +46,8 @@ builder.Services.AddHangfire(cfg => cfg
     .UseRedisStorage(redisConfig.ToString(), new RedisStorageOptions
     {
         InvisibilityTimeout = hangfireOptions.InvisibilityTimeout,
-    }));
+    })
+    .WithJobExpirationTimeout(hangfireOptions.JobExpirationTimeout));
 
 builder.Services.AddHangfireServer(opts =>
 {

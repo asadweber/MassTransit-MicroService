@@ -21,5 +21,11 @@ namespace Infrastructure
         // queue. Default is 30 min — far too long for a job stuck on a hung
         // RabbitMQ publish; shortened so a dead worker's job is reclaimed fast.
         public TimeSpan InvisibilityTimeout { get; set; } = TimeSpan.FromMinutes(5);
+
+        // How long a job stays in storage after reaching a final state
+        // (Succeeded/Deleted) before Hangfire's expiration manager sweeps it.
+        // Default is 7 days so completed job history is available for a
+        // reasonable window without growing Redis storage unbounded.
+        public TimeSpan JobExpirationTimeout { get; set; } = TimeSpan.FromDays(7);
     }
 }
