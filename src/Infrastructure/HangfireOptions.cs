@@ -15,5 +15,11 @@ namespace Infrastructure
         // gone silent past ServerTimeout. Kept well below ServerTimeout so
         // detection isn't delayed by the poll interval itself.
         public TimeSpan ServerCheckInterval { get; set; } = TimeSpan.FromSeconds(30);
+
+        // How long a fetched job stays invisible to other workers before
+        // Hangfire assumes the fetching worker died and puts it back on the
+        // queue. Default is 30 min — far too long for a job stuck on a hung
+        // RabbitMQ publish; shortened so a dead worker's job is reclaimed fast.
+        public TimeSpan InvisibilityTimeout { get; set; } = TimeSpan.FromMinutes(5);
     }
 }

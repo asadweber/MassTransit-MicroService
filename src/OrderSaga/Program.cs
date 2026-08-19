@@ -28,12 +28,25 @@ var rmqOptions = builder.Configuration.GetSection("RabbitMQ").Get<RabbitMqOption
 // delayed-exchange plugin — avoids depending on
 // rabbitmq_delayed_message_exchange being installed.
 var redisOptions = builder.Configuration.GetSection("Redis").Get<RedisOptions>()!;
+var hangfireOptions = builder.Configuration.GetSection("Hangfire").Get<HangfireOptions>() ?? new HangfireOptions();
+
+var redisConfig = StackExchange.Redis.ConfigurationOptions.Parse(redisOptions.ConnectionString);
+redisConfig.ConnectTimeout = redisOptions.ConnectTimeoutMs;
+redisConfig.SyncTimeout = redisOptions.SyncTimeoutMs;
+redisConfig.AbortOnConnectFail = redisOptions.AbortOnConnectFail;
+
 builder.Services.AddHangfire(cfg => cfg
+    // Required: Hangfire.Redis.StackExchange does not implement
+    // TransactionalAcknowledge. Without pinning this, jobs that transition
+    // to FailedState throw NotSupportedException in RemoveFromQueue.
+    .SetDataCompatibilityLevel(CompatibilityLevel.Version_170)
     .UseSimpleAssemblyNameTypeSerializer()
     .UseRecommendedSerializerSettings()
-    .UseRedisStorage(redisOptions.ConnectionString));
+    .UseRedisStorage(redisConfig.ToString(), new RedisStorageOptions
+    {
+        InvisibilityTimeout = hangfireOptions.InvisibilityTimeout,
+    }));
 
-var hangfireOptions = builder.Configuration.GetSection("Hangfire").Get<HangfireOptions>() ?? new HangfireOptions();
 builder.Services.AddHangfireServer(opts =>
 {
     opts.WorkerCount = hangfireOptions.WorkerCount;
@@ -87,8 +100,8 @@ builder.Services.AddMassTransit(x =>
             // stuck "Processing" forever instead of throwing and letting Hangfire's
             // AutomaticRetry recover it. Heartbeat detects the dead connection and
             // tears it down so pending operations fail fast instead of hanging.
-            h.Heartbeat(TimeSpan.FromSeconds(10));
-            h.RequestedConnectionTimeout(TimeSpan.FromSeconds(15));
+            h.Heartbeat(TimeSpan.FromSeconds(rmq.HeartbeatSeconds));
+            h.RequestedConnectionTimeout(TimeSpan.FromSeconds(rmq.RequestedConnectionTimeoutSeconds));
         });
 
         cfg.UseNewtonsoftJsonSerializer();

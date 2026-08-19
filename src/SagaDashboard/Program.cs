@@ -26,10 +26,24 @@ builder.Services.AddApplication();
 // instead of the RabbitMQ delayed-exchange plugin — avoids depending on
 // rabbitmq_delayed_message_exchange being installed.
 var redisOptions = builder.Configuration.GetSection("Redis").Get<RedisOptions>()!;
+var hangfireOptions = builder.Configuration.GetSection("Hangfire").Get<HangfireOptions>() ?? new HangfireOptions();
+
+var redisConfig = StackExchange.Redis.ConfigurationOptions.Parse(redisOptions.ConnectionString);
+redisConfig.ConnectTimeout = redisOptions.ConnectTimeoutMs;
+redisConfig.SyncTimeout = redisOptions.SyncTimeoutMs;
+redisConfig.AbortOnConnectFail = redisOptions.AbortOnConnectFail;
+
 builder.Services.AddHangfire(cfg => cfg
+    // Required: Hangfire.Redis.StackExchange does not implement
+    // TransactionalAcknowledge. Without pinning this, jobs that transition
+    // to FailedState throw NotSupportedException in RemoveFromQueue.
+    .SetDataCompatibilityLevel(CompatibilityLevel.Version_170)
     .UseSimpleAssemblyNameTypeSerializer()
     .UseRecommendedSerializerSettings()
-    .UseRedisStorage(redisOptions.ConnectionString));
+    .UseRedisStorage(redisConfig.ToString(), new RedisStorageOptions
+    {
+        InvisibilityTimeout = hangfireOptions.InvisibilityTimeout,
+    }));
 
 
 // ── MassTransit — dashboard visibility only ─────────────────────────────────
