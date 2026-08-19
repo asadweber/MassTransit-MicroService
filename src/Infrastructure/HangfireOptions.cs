@@ -26,6 +26,6 @@ namespace Infrastructure
         // (Succeeded/Deleted) before Hangfire's expiration manager sweeps it.
         // Default is 7 days so completed job history is available for a
         // reasonable window without growing Redis storage unbounded.
-        public TimeSpan JobExpirationTimeout { get; set; } = TimeSpan.FromDays(7);
+        public TimeSpan JobExpirationTimeout { get; set; } = TimeSpan.FromDays(1);
     }
 }
