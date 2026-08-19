@@ -29,7 +29,11 @@ var rmqOptions = builder.Configuration.GetSection("RabbitMQ").Get<RabbitMqOption
 // on rabbitmq_delayed_message_exchange being installed.
 var redisOptions = builder.Configuration.GetSection("Redis").Get<RedisOptions>()!;
 builder.Services.AddHangfire(cfg => cfg
-    .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+    // Confirmed necessary: without this, the default compatibility level
+    // still triggers TransactionalAcknowledge, which
+    // Hangfire.Redis.StackExchange 1.10.0 does not implement, throwing
+    // NotSupportedException on every job that reaches FailedState.
+    .SetDataCompatibilityLevel(CompatibilityLevel.Version_170)
     .UseSimpleAssemblyNameTypeSerializer()
     .UseRecommendedSerializerSettings()
     .UseRedisStorage(redisOptions.ConnectionString));

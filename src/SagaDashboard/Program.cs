@@ -27,14 +27,15 @@ builder.Services.AddApplication();
 // rabbitmq_delayed_message_exchange being installed.
 var redisOptions = builder.Configuration.GetSection("Redis").Get<RedisOptions>()!;
 builder.Services.AddHangfire(cfg => cfg
-    .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+    // Confirmed necessary: without this, the default compatibility level
+    // still triggers TransactionalAcknowledge, which
+    // Hangfire.Redis.StackExchange 1.10.0 does not implement, throwing
+    // NotSupportedException on every job that reaches FailedState.
+    .SetDataCompatibilityLevel(CompatibilityLevel.Version_170)
     .UseSimpleAssemblyNameTypeSerializer()
     .UseRecommendedSerializerSettings()
     .UseRedisStorage(redisOptions.ConnectionString));
-// NOTE: intentionally no AddHangfireServer() here — this process only hosts
-// the dashboard UI. Running a worker here would let it pick up jobs from the
-// shared Redis queue and, if this process restarts/recycles mid-job, leave
-// the job stuck in "Processing" until the invisibility timeout requeues it.
+
 
 // ── MassTransit — dashboard visibility only ─────────────────────────────────
 builder.Services.AddMassTransit(x =>
