@@ -33,6 +33,7 @@ builder.Services.AddHangfire(cfg => cfg
     .UseSimpleAssemblyNameTypeSerializer()
     .UseRecommendedSerializerSettings()
     .UseRedisStorage(redisOptions.ConnectionString));
+
 builder.Services.AddHangfireServer();
 
 builder.Services.AddMassTransit(x =>
