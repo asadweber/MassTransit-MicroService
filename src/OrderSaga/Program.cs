@@ -39,6 +39,8 @@ builder.Services.AddHangfireServer(opts =>
 {
     opts.WorkerCount = hangfireOptions.WorkerCount;
     opts.Queues = hangfireOptions.Queues;
+    opts.ServerTimeout = hangfireOptions.ServerTimeout;
+    opts.ServerCheckInterval = hangfireOptions.ServerCheckInterval;
 });
 
 builder.Services.AddMassTransit(x =>
