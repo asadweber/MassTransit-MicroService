@@ -17,11 +17,6 @@ namespace Infrastructure
         public int MessageDeliveryLimit { get; set; }
         public double MessageDeliveryTimeoutSeconds { get; set; }
 
-        // A dead/starved connection otherwise blocks Publish/Send indefinitely
-        // (no default timeout) — a Hangfire-scheduled job's worker thread stays
-        // stuck "Processing" forever instead of throwing and letting Hangfire's
-        // AutomaticRetry recover it. Heartbeat detects the dead connection and
-        // tears it down so pending operations fail fast instead of hanging.
         public double HeartbeatSeconds { get; set; } = 10;
         public double RequestedConnectionTimeoutSeconds { get; set; } = 15;
     }
