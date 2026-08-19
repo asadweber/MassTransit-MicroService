@@ -456,8 +456,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
 
                 .Then(ctx =>
                 {
-                    ctx.Saga.Status =
-                        "Payment Complete";
+                    ctx.Saga.Status ="Payment Complete";
 
                     _logger.LogInformation(
                         "Order {OrderId} [{CorrelationId}]: " +
