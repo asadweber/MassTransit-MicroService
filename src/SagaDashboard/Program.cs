@@ -31,7 +31,10 @@ builder.Services.AddHangfire(cfg => cfg
     .UseSimpleAssemblyNameTypeSerializer()
     .UseRecommendedSerializerSettings()
     .UseRedisStorage(redisOptions.ConnectionString));
-builder.Services.AddHangfireServer();
+// NOTE: intentionally no AddHangfireServer() here — this process only hosts
+// the dashboard UI. Running a worker here would let it pick up jobs from the
+// shared Redis queue and, if this process restarts/recycles mid-job, leave
+// the job stuck in "Processing" until the invisibility timeout requeues it.
 
 // ── MassTransit — dashboard visibility only ─────────────────────────────────
 builder.Services.AddMassTransit(x =>

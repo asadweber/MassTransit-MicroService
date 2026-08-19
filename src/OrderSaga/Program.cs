@@ -34,7 +34,12 @@ builder.Services.AddHangfire(cfg => cfg
     .UseRecommendedSerializerSettings()
     .UseRedisStorage(redisOptions.ConnectionString));
 
-builder.Services.AddHangfireServer();
+var hangfireOptions = builder.Configuration.GetSection("Hangfire").Get<HangfireOptions>() ?? new HangfireOptions();
+builder.Services.AddHangfireServer(opts =>
+{
+    opts.WorkerCount = hangfireOptions.WorkerCount;
+    opts.Queues = hangfireOptions.Queues;
+});
 
 builder.Services.AddMassTransit(x =>
 {
