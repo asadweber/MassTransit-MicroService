@@ -10,7 +10,10 @@ namespace Infrastructure
         public int ConcurrentMessageLimit { get; set; } = 16;
         public int RateLimit { get; set; } = 1000;
         public int QueryMessageLimit { get; set; }
-        public double QueryDelaySeconds { get; set; }
+        public int QueryDelaySeconds { get; set; }
+        public int QueryTimeoutSeconds { get; set; } = 30;
+
+
         public int MessageDeliveryLimit { get; set; }
         public double MessageDeliveryTimeoutSeconds { get; set; }
 
@@ -21,6 +24,5 @@ namespace Infrastructure
         // tears it down so pending operations fail fast instead of hanging.
         public double HeartbeatSeconds { get; set; } = 10;
         public double RequestedConnectionTimeoutSeconds { get; set; } = 15;
-        public double QueryTimeoutSeconds { get; set; } = 30;
     }
 }
