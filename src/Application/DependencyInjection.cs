@@ -12,7 +12,7 @@ public static class DependencyInjection
         services.AddScoped<IOrderService, OrderService>();
         services.AddScoped<IProductService, ProductService>();
 
-        services.AddAutoMapper(typeof(MapperProfile).Assembly);
+        services.AddAutoMapper(cfg => cfg.AddMaps(typeof(MapperProfile).Assembly));
 
         return services;
     }
