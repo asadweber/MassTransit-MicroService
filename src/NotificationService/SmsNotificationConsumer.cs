@@ -20,9 +20,11 @@ public class SmsNotificationConsumer(
         var notification = (await uow.OrderNotifications.FindAsync(n => n.OrderId == message.Order.Id))
             .FirstOrDefault();
 
+        var sent = false;
         if (notification is not null && notification.NotifyToSMS)
         {
             notification.SMSSendStatus = true;
+            sent = true;
 
             await uow.OrderNotifications.Update(notification);
             await uow.SaveChangesAsync();
@@ -35,8 +37,10 @@ public class SmsNotificationConsumer(
         });
 
         logger.LogInformation(
-            "Order {OrderId} [{CorrelationId}]: SMS notification completed",
+            "Order {OrderId} [{CorrelationId}]: SMS notification completed, Sent={Sent}, Reason={Reason}",
             message.Order.Id,
-            message.CorrelationId);
+            message.CorrelationId,
+            sent,
+            notification is null ? "NoNotificationRecord" : sent ? "OK" : "NotOptedIn");
     }
 }

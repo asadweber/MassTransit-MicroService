@@ -14,15 +14,19 @@ public class InventoryConsumer(ILogger<InventoryConsumer> logger, IOrderService 
         using var _ = Serilog.Context.LogContext.PushProperty("CorrelationId", msg.CorrelationId);
         using var __ = Serilog.Context.LogContext.PushProperty("OrderId", msg.Order.Id);
 
-        logger.LogInformation("Checking inventory");
+        logger.LogInformation(
+            "Order {OrderId} [{CorrelationId}]: checking inventory for {ItemCount} line item(s)",
+            msg.Order.Id, msg.CorrelationId, msg.Order.OrderDetails.Count);
 
         var isAvailable = true;
+        long shortProductId = 0;
         foreach (var item in msg.Order.OrderDetails)
         {
             var hasSufficientStock = await productService.HasSufficientStockAsync(item.ProductId, item.OrderQty);
             if (!hasSufficientStock)
             {
                 isAvailable = false;
+                shortProductId = item.ProductId;
                 break;
             }
         }
@@ -36,7 +40,9 @@ public class InventoryConsumer(ILogger<InventoryConsumer> logger, IOrderService 
             await orderService.UpdateAsync(msg.Order.Id, msg.Order);
         }
 
-        logger.LogInformation("Inventory check result -> IsAvailable={IsAvailable}", isAvailable);
+        logger.LogInformation(
+            "Order {OrderId} [{CorrelationId}]: inventory check result -> IsAvailable={IsAvailable}, ShortProductId={ShortProductId}",
+            msg.Order.Id, msg.CorrelationId, isAvailable, shortProductId);
 
         await context.Publish(new InventoryChecked
         {

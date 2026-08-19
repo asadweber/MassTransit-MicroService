@@ -461,9 +461,10 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
 
                     _logger.LogInformation(
                         "Order {OrderId} [{CorrelationId}]: " +
-                        "Payment completed",
+                        "Payment completed, Amount={Amount}",
                         ctx.Saga.OrderId,
-                        ctx.Saga.CorrelationId);
+                        ctx.Saga.CorrelationId,
+                        ctx.Saga.TotalAmount);
                 })
 
                 .PublishAsync(ctx =>
@@ -648,21 +649,11 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
         return new OrderDto
         {
             Id = saga.OrderId,
-
-            CustomerName =
-                saga.CustomerName,
-
-            OrderDate =
-                saga.OrderDate,
-
-            TotalAmount =
-                saga.TotalAmount,
-
-            Status =
-                saga.Status,
-
-            OrderDetails =
-                saga.OrderDetails
+            CustomerName =saga.CustomerName,
+            OrderDate =saga.OrderDate,
+            TotalAmount =saga.TotalAmount,
+            Status =saga.Status,
+            OrderDetails =saga.OrderDetails
                     .Select(d => new OrderDetailDto
                     {
                         Id = d.OrderDetailId,
@@ -673,7 +664,6 @@ public class OrderStateMachine : MassTransitStateMachine<OrderSagaState>
                         Total = d.Total
                     })
                     .ToList(),
-
         };
     }
 

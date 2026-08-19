@@ -20,14 +20,16 @@ public class EmailNotificationConsumer(
         var notification = (await uow.OrderNotifications.FindAsync(n => n.OrderId == message.Order.Id))
             .FirstOrDefault();
 
+        var sent = false;
         if (notification is not null && notification.NotifyToEmail)
         {
             notification.EmailSendStatus = true;
+            sent = true;
 
             await uow.OrderNotifications.Update(notification);
             await uow.SaveChangesAsync();
         }
-       
+
 
         await context.Publish(new EmailNotificationSent
         {
@@ -36,8 +38,10 @@ public class EmailNotificationConsumer(
         });
 
         logger.LogInformation(
-            "Order {OrderId} [{CorrelationId}]: Email notification completed",
+            "Order {OrderId} [{CorrelationId}]: Email notification completed, Sent={Sent}, Reason={Reason}",
             message.Order.Id,
-            message.CorrelationId);
+            message.CorrelationId,
+            sent,
+            notification is null ? "NoNotificationRecord" : sent ? "OK" : "NotOptedIn");
     }
 }

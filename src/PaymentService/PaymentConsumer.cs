@@ -18,7 +18,9 @@ public class PaymentConsumer(ILogger<PaymentConsumer> logger, IOrderService orde
         using var _ = Serilog.Context.LogContext.PushProperty("CorrelationId", msg.CorrelationId);
         using var __ = Serilog.Context.LogContext.PushProperty("OrderId", msg.Order.Id);
 
-        logger.LogInformation("Processing payment, Amount={Amount}", msg.Order.TotalAmount);
+        logger.LogInformation(
+            "Order {OrderId} [{CorrelationId}]: processing payment, Amount={Amount}, ItemCount={ItemCount}",
+            msg.Order.Id, msg.CorrelationId, msg.Order.TotalAmount, msg.Order.OrderDetails.Count);
 
         // TODO: real payment processing logic
         var isSuccess = true;
@@ -30,7 +32,9 @@ public class PaymentConsumer(ILogger<PaymentConsumer> logger, IOrderService orde
         //   await productService.ReduceStockQtyAsync(item.ProductId, item.OrderQty);
         //}
 
-        logger.LogInformation("Payment result -> IsSuccess={IsSuccess}", isSuccess);
+        logger.LogInformation(
+            "Order {OrderId} [{CorrelationId}]: payment result -> IsSuccess={IsSuccess}, Amount={Amount}",
+            msg.Order.Id, msg.CorrelationId, isSuccess, msg.Order.TotalAmount);
 
         await context.Publish(new PaymentProcessed
         {
