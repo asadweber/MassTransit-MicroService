@@ -67,6 +67,9 @@ builder.Services.AddMassTransit(x =>
         o.UseSqlServer();
         o.QueryMessageLimit = rmqOptions.QueryMessageLimit;
         o.QueryDelay = TimeSpan.FromSeconds(rmqOptions.QueryDelaySeconds);
+
+        // See InventoryService/Program.cs — same InboxCleanupService deadlock fix.
+        o.IsolationLevel = System.Data.IsolationLevel.ReadCommitted;
         o.UseBusOutbox(bo =>
         {
             bo.MessageDeliveryLimit = rmqOptions.MessageDeliveryLimit;
