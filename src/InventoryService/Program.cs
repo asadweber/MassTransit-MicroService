@@ -76,6 +76,14 @@ builder.Services.AddMassTransit(x =>
         {
             h.Username(rmq.Username);
             h.Password(rmq.Password);
+
+            // A dead/starved connection otherwise blocks Publish/Send indefinitely
+            // (no default timeout) — a Hangfire-scheduled job's worker thread stays
+            // stuck "Processing" forever instead of throwing and letting Hangfire's
+            // AutomaticRetry recover it. Heartbeat detects the dead connection and
+            // tears it down so pending operations fail fast instead of hanging.
+            h.Heartbeat(TimeSpan.FromSeconds(10));
+            h.RequestedConnectionTimeout(TimeSpan.FromSeconds(15));
         });
 
         // Use Newtonsoft (not default System.Text.Json) for message (de)serialization.
