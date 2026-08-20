@@ -1,3 +1,4 @@
+using Application.Dtos;
 using Application.Mappings;
 using Application.Services;
 using AutoMapper;
@@ -29,6 +30,52 @@ public class ProductServiceTests
     }
 
     [Fact]
+    public async Task CreateAsync_HappyPath_PersistsProduct()
+    {
+        var request = new ProductDto { Name = "Widget", Price = 5m, Stock = 10 };
+        _uow.Setup(u => u.SaveChangesAsync()).ReturnsAsync(1);
+
+        var result = await _sut.CreateAsync(request);
+
+        result.Name.Should().Be("Widget");
+        _productRepo.Verify(r => r.AddAsync(It.Is<Product>(p => p.Name == "Widget" && p.Stock == 10)), Times.Once);
+        _uow.Verify(u => u.SaveChangesAsync(), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateAsync_RepositoryThrows_PropagatesException()
+    {
+        var request = new ProductDto { Name = "Widget" };
+        _productRepo.Setup(r => r.AddAsync(It.IsAny<Product>()))
+            .ThrowsAsync(new InvalidOperationException("db failure"));
+
+        var act = () => _sut.CreateAsync(request);
+
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("db failure");
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_ProductExists_ReturnsDto()
+    {
+        _productRepo.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(new Product { Id = 1, Name = "Widget" });
+
+        var result = await _sut.GetByIdAsync(1);
+
+        result.Should().NotBeNull();
+        result!.Name.Should().Be("Widget");
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_ProductNotFound_ReturnsNull()
+    {
+        _productRepo.Setup(r => r.GetByIdAsync(It.IsAny<long>())).ReturnsAsync((Product?)null);
+
+        var result = await _sut.GetByIdAsync(99);
+
+        result.Should().BeNull();
+    }
+
+    [Fact]
     public async Task GetAllAsync_NoProducts_ReturnsEmptyList()
     {
         _productRepo.Setup(r => r.GetAllAsync()).ReturnsAsync((IReadOnlyList<Product>)[]);
@@ -46,6 +93,67 @@ public class ProductServiceTests
         var act = () => _sut.GetAllAsync();
 
         await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("db failure");
+    }
+
+    [Fact]
+    public async Task UpdateAsync_HappyPath_UpdatesAndReturnsTrue()
+    {
+        var existing = new Product { Id = 1, Name = "Old", Price = 1m, Stock = 1 };
+        _productRepo.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(existing);
+        _uow.Setup(u => u.SaveChangesAsync()).ReturnsAsync(1);
+        var request = new ProductDto { Id = 1, Name = "New", Price = 2m, Stock = 5 };
+
+        var result = await _sut.UpdateAsync(1, request);
+
+        result.Should().BeTrue();
+        existing.Name.Should().Be("New");
+        _productRepo.Verify(r => r.Update(existing), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_MismatchedId_ReturnsFalseWithoutTouchingRepository()
+    {
+        var request = new ProductDto { Id = 1 };
+
+        var result = await _sut.UpdateAsync(2, request);
+
+        result.Should().BeFalse();
+        _productRepo.Verify(r => r.GetByIdAsync(It.IsAny<long>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ProductNotFound_ReturnsFalse()
+    {
+        _productRepo.Setup(r => r.GetByIdAsync(5)).ReturnsAsync((Product?)null);
+        var request = new ProductDto { Id = 5 };
+
+        var result = await _sut.UpdateAsync(5, request);
+
+        result.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task DeleteAsync_ProductExists_RemovesAndSaves()
+    {
+        var product = new Product { Id = 7 };
+        _productRepo.Setup(r => r.GetByIdAsync(7)).ReturnsAsync(product);
+        _uow.Setup(u => u.SaveChangesAsync()).ReturnsAsync(1);
+
+        var result = await _sut.DeleteAsync(7);
+
+        result.Should().BeTrue();
+        _productRepo.Verify(r => r.Remove(product), Times.Once);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_ProductNotFound_ReturnsFalse()
+    {
+        _productRepo.Setup(r => r.GetByIdAsync(It.IsAny<long>())).ReturnsAsync((Product?)null);
+
+        var result = await _sut.DeleteAsync(123);
+
+        result.Should().BeFalse();
+        _productRepo.Verify(r => r.Remove(It.IsAny<Product>()), Times.Never);
     }
 
     [Fact]

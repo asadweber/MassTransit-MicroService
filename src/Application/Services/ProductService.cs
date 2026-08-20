@@ -41,4 +41,44 @@ public class ProductService(IUnitOfWork uow, IPublishEndpoint bus, IMapper mappe
         var products = await uow.Products.GetAllAsync();
         return mapper.Map<List<ProductDto>>(products);
     }
+
+    public async Task<ProductDto?> GetByIdAsync(long id)
+    {
+        var product = await uow.Products.GetByIdAsync(id);
+        return product is null ? null : mapper.Map<ProductDto>(product);
+    }
+
+    public async Task<ProductDto> CreateAsync(ProductDto request)
+    {
+        var product = mapper.Map<Product>(request);
+
+        await uow.Products.AddAsync(product);
+        await uow.SaveChangesAsync();
+
+        return mapper.Map<ProductDto>(product);
+    }
+
+    public async Task<bool> UpdateAsync(long id, ProductDto request)
+    {
+        if (id != request.Id) return false;
+
+        var existing = await uow.Products.GetByIdAsync(id);
+        if (existing is null) return false;
+
+        mapper.Map(request, existing);
+
+        await uow.Products.Update(existing);
+        await uow.SaveChangesAsync();
+        return true;
+    }
+
+    public async Task<bool> DeleteAsync(long id)
+    {
+        var product = await uow.Products.GetByIdAsync(id);
+        if (product is null) return false;
+
+        uow.Products.Remove(product);
+        await uow.SaveChangesAsync();
+        return true;
+    }
 }
