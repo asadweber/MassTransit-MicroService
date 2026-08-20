@@ -1,4 +1,5 @@
 using System.Linq.Expressions;
+using System.Reflection;
 using Domain.Repositories;
 using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -45,22 +46,23 @@ public class GenericRepository<T>(AppDbContext context) : IGenericRepository<T> 
         return (items, totalCount);
     }
 
+    private const BindingFlags PropertyLookupFlags = BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance;
+
     private static IQueryable<T> ApplyOrderBy(IQueryable<T> query, string propertyName, bool descending)
     {
-        var property = typeof(T).GetProperty(propertyName,
-            System.Reflection.BindingFlags.IgnoreCase | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance)
+        var property = typeof(T).GetProperty(propertyName, PropertyLookupFlags)
             ?? throw new ArgumentException($"Property '{propertyName}' does not exist on type '{typeof(T).Name}'.", nameof(propertyName));
 
         var parameter = Expression.Parameter(typeof(T), "x");
-        var propertyAccess = Expression.Property(parameter, property);
-        var lambda = Expression.Lambda(propertyAccess, parameter);
+        var keySelector = Expression.Lambda(Expression.Property(parameter, property), parameter);
 
-        var methodName = descending ? "OrderByDescending" : "OrderBy";
-        var method = typeof(Queryable).GetMethods()
-            .First(m => m.Name == methodName && m.GetParameters().Length == 2)
+        var orderByMethod = typeof(Queryable)
+            .GetMethods()
+            .Single(m => m.Name == (descending ? nameof(Queryable.OrderByDescending) : nameof(Queryable.OrderBy))
+                         && m.GetParameters().Length == 2)
             .MakeGenericMethod(typeof(T), property.PropertyType);
 
-        return (IQueryable<T>)method.Invoke(null, [query, lambda])!;
+        return (IQueryable<T>)orderByMethod.Invoke(null, [query, keySelector])!;
     }
 
     public async Task<IReadOnlyList<T>> FindAsync(Expression<Func<T, bool>> predicate)
