@@ -3,6 +3,7 @@ using FluentAssertions;
 using Infrastructure.Persistence;
 using Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
+using MicroService.Tests.Fakes;
 
 namespace MicroService.Tests.Repositories;
 
@@ -13,11 +14,7 @@ public class ProductRepositoryTests : IDisposable
 
     public ProductRepositoryTests()
     {
-        var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString())
-            .Options;
-
-        _context = new AppDbContext(options);
+        _context = FakeDbContext.Create();
         _sut = new ProductRepository(_context);
     }
 
