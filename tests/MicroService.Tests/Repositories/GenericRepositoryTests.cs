@@ -100,6 +100,57 @@ public class GenericRepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task GetPagedAsync_WithFilter_ReturnsOnlyMatchingItemsAndTotalCount()
+    {
+        _context.Products.AddRange(
+            new Product { Name = "InStock1", Stock = 5 },
+            new Product { Name = "InStock2", Stock = 3 },
+            new Product { Name = "OutOfStock", Stock = 0 });
+        await _context.SaveChangesAsync();
+
+        var (items, totalCount) = await _sut.GetPagedAsync(1, 10, filter: p => p.Stock > 0);
+
+        totalCount.Should().Be(2);
+        items.Should().OnlyContain(p => p.Stock > 0);
+    }
+
+    [Fact]
+    public async Task GetPagedAsync_WithOrderByAscending_ReturnsSortedItems()
+    {
+        _context.Products.AddRange(
+            new Product { Name = "Charlie", Price = 3m },
+            new Product { Name = "Alice", Price = 1m },
+            new Product { Name = "Bob", Price = 2m });
+        await _context.SaveChangesAsync();
+
+        var (items, _) = await _sut.GetPagedAsync(1, 10, orderBy: nameof(Product.Name));
+
+        items.Select(p => p.Name).Should().ContainInOrder("Alice", "Bob", "Charlie");
+    }
+
+    [Fact]
+    public async Task GetPagedAsync_WithOrderByDescending_ReturnsReverseSortedItems()
+    {
+        _context.Products.AddRange(
+            new Product { Name = "Alice", Price = 1m },
+            new Product { Name = "Bob", Price = 2m },
+            new Product { Name = "Charlie", Price = 3m });
+        await _context.SaveChangesAsync();
+
+        var (items, _) = await _sut.GetPagedAsync(1, 10, orderBy: nameof(Product.Price), descending: true);
+
+        items.Select(p => p.Price).Should().ContainInOrder(3m, 2m, 1m);
+    }
+
+    [Fact]
+    public async Task GetPagedAsync_InvalidOrderByProperty_ThrowsArgumentException()
+    {
+        var act = () => _sut.GetPagedAsync(1, 10, orderBy: "DoesNotExist");
+
+        await act.Should().ThrowAsync<ArgumentException>();
+    }
+
+    [Fact]
     public async Task GetPagedAsync_NoEntities_ReturnsEmptyWithZeroTotal()
     {
         var (items, totalCount) = await _sut.GetPagedAsync(pageNumber: 1, pageSize: 10);

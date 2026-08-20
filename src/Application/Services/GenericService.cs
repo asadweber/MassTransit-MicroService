@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using Application.Dtos;
 using Application.Interfaces;
 using AutoMapper;
@@ -23,9 +24,16 @@ public abstract class GenericService<TEntity, TDto>(
         return mapper.Map<List<TDto>>(entities);
     }
 
-    public virtual async Task<PagedResult<TDto>> GetPagedAsync(int pageNumber, int pageSize)
+    public virtual async Task<PagedResult<TDto>> GetPagedAsync(
+        int pageNumber,
+        int pageSize,
+        Expression<Func<TDto, bool>>? filter = null,
+        string? orderBy = null,
+        bool descending = false)
     {
-        var (items, totalCount) = await Repository.GetPagedAsync(pageNumber, pageSize);
+        var entityFilter = filter is null ? null : RetargetParameter<TDto, TEntity>(filter);
+
+        var (items, totalCount) = await Repository.GetPagedAsync(pageNumber, pageSize, entityFilter, orderBy, descending);
 
         return new PagedResult<TDto>
         {
@@ -34,6 +42,34 @@ public abstract class GenericService<TEntity, TDto>(
             PageNumber = pageNumber,
             PageSize = pageSize
         };
+    }
+
+    // Rebuilds a predicate written against TSource (the DTO) so it runs against TTarget (the entity).
+    // Valid only when both types expose identically-named members for every property the predicate touches,
+    // which holds here because MapperProfile maps Order/Product to their DTOs 1:1.
+    private static Expression<Func<TTarget, bool>> RetargetParameter<TSource, TTarget>(Expression<Func<TSource, bool>> source)
+    {
+        var targetParameter = Expression.Parameter(typeof(TTarget), source.Parameters[0].Name);
+        var body = new ParameterRetargetVisitor(source.Parameters[0], targetParameter).Visit(source.Body);
+        return Expression.Lambda<Func<TTarget, bool>>(body!, targetParameter);
+    }
+
+    private sealed class ParameterRetargetVisitor(ParameterExpression source, ParameterExpression target) : ExpressionVisitor
+    {
+        protected override Expression VisitParameter(ParameterExpression node)
+            => node == source ? target : base.VisitParameter(node);
+
+        protected override Expression VisitMember(MemberExpression node)
+        {
+            if (node.Expression == source)
+            {
+                var property = target.Type.GetProperty(node.Member.Name)
+                    ?? throw new InvalidOperationException($"'{target.Type.Name}' has no member '{node.Member.Name}' matching '{source.Type.Name}'.");
+                return Expression.Property(target, property);
+            }
+
+            return base.VisitMember(node);
+        }
     }
 
     public virtual async Task<TDto?> GetByIdAsync(long id)

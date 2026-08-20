@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using Application.Dtos;
 using Application.Mappings;
 using Application.Services;
@@ -93,7 +94,7 @@ public class ProductServiceTests
             new() { Id = 1, Name = "Widget" },
             new() { Id = 2, Name = "Gadget" }
         };
-        _productRepo.Setup(r => r.GetPagedAsync(1, 2))
+        _productRepo.Setup(r => r.GetPagedAsync(1, 2, null, null, false))
             .ReturnsAsync(((IReadOnlyList<Product>)products, 5));
 
         var result = await _sut.GetPagedAsync(1, 2);
@@ -103,6 +104,33 @@ public class ProductServiceTests
         result.PageSize.Should().Be(2);
         result.Items.Should().HaveCount(2);
         result.TotalPages.Should().Be(3);
+    }
+
+    [Fact]
+    public async Task GetPagedAsync_WithDtoFilter_RetargetsPredicateToEntity()
+    {
+        Expression<Func<Product, bool>>? capturedFilter = null;
+        _productRepo.Setup(r => r.GetPagedAsync(1, 10, It.IsAny<Expression<Func<Product, bool>>>(), null, false))
+            .Callback<int, int, Expression<Func<Product, bool>>?, string?, bool>((_, _, f, _, _) => capturedFilter = f)
+            .ReturnsAsync(((IReadOnlyList<Product>)[], 0));
+
+        await _sut.GetPagedAsync(1, 10, filter: dto => dto.Stock > 0);
+
+        capturedFilter.Should().NotBeNull();
+        capturedFilter!.Compile()(new Product { Stock = 5 }).Should().BeTrue();
+        capturedFilter.Compile()(new Product { Stock = 0 }).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task GetPagedAsync_WithOrderBy_PassesThroughToRepository()
+    {
+        _productRepo.Setup(r => r.GetPagedAsync(1, 10, null, "Name", true))
+            .ReturnsAsync(((IReadOnlyList<Product>)[], 0));
+
+        var result = await _sut.GetPagedAsync(1, 10, orderBy: "Name", descending: true);
+
+        result.TotalCount.Should().Be(0);
+        _productRepo.Verify(r => r.GetPagedAsync(1, 10, null, "Name", true), Times.Once);
     }
 
     [Fact]

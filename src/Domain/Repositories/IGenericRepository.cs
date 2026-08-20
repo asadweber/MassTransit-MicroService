@@ -6,7 +6,14 @@ public interface IGenericRepository<T> where T : class
 {
     Task<T?> GetByIdAsync(long id);
     Task<IReadOnlyList<T>> GetAllAsync();
-    Task<(IReadOnlyList<T> Items, int TotalCount)> GetPagedAsync(int pageNumber, int pageSize);
+
+    Task<(IReadOnlyList<T> Items, int TotalCount)> GetPagedAsync(
+        int pageNumber,
+        int pageSize,
+        Expression<Func<T, bool>>? filter = null,
+        string? orderBy = null,
+        bool descending = false);
+
     Task<IReadOnlyList<T>> FindAsync(Expression<Func<T, bool>> predicate);
     Task AddAsync(T entity);
     Task Update(T entity);
