@@ -29,6 +29,26 @@ public class ProductServiceTests
     }
 
     [Fact]
+    public async Task GetAllAsync_NoProducts_ReturnsEmptyList()
+    {
+        _productRepo.Setup(r => r.GetAllAsync()).ReturnsAsync((IReadOnlyList<Product>)[]);
+
+        var result = await _sut.GetAllAsync();
+
+        result.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task GetAllAsync_RepositoryThrows_PropagatesException()
+    {
+        _productRepo.Setup(r => r.GetAllAsync()).ThrowsAsync(new InvalidOperationException("db failure"));
+
+        var act = () => _sut.GetAllAsync();
+
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("db failure");
+    }
+
+    [Fact]
     public async Task HasSufficientStockAsync_StockCoversQty_ReturnsTrue()
     {
         _productRepo.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(new Product { Id = 1, Stock = 10 });
@@ -96,25 +116,5 @@ public class ProductServiceTests
 
         result.Should().BeFalse();
         _uow.Verify(u => u.BeginTransactionAsync(), Times.Never);
-    }
-
-    [Fact]
-    public async Task GetAllAsync_NoProducts_ReturnsEmptyList()
-    {
-        _productRepo.Setup(r => r.GetAllAsync()).ReturnsAsync((IReadOnlyList<Product>)[]);
-
-        var result = await _sut.GetAllAsync();
-
-        result.Should().BeEmpty();
-    }
-
-    [Fact]
-    public async Task GetAllAsync_RepositoryThrows_PropagatesException()
-    {
-        _productRepo.Setup(r => r.GetAllAsync()).ThrowsAsync(new InvalidOperationException("db failure"));
-
-        var act = () => _sut.GetAllAsync();
-
-        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("db failure");
     }
 }
