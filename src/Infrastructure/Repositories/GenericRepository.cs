@@ -20,6 +20,17 @@ public class GenericRepository<T>(AppDbContext context) : IGenericRepository<T> 
         return await Set.ToListAsync();
     }
 
+    public async Task<(IReadOnlyList<T> Items, int TotalCount)> GetPagedAsync(int pageNumber, int pageSize)
+    {
+        var totalCount = await Set.CountAsync();
+        var items = await Set
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        return (items, totalCount);
+    }
+
     public async Task<IReadOnlyList<T>> FindAsync(Expression<Func<T, bool>> predicate)
     {
         return await Set.Where(predicate).ToListAsync();

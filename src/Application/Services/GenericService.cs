@@ -1,3 +1,4 @@
+using Application.Dtos;
 using Application.Interfaces;
 using AutoMapper;
 using Domain;
@@ -20,6 +21,19 @@ public abstract class GenericService<TEntity, TDto>(
     {
         var entities = await Repository.GetAllAsync();
         return mapper.Map<List<TDto>>(entities);
+    }
+
+    public virtual async Task<PagedResult<TDto>> GetPagedAsync(int pageNumber, int pageSize)
+    {
+        var (items, totalCount) = await Repository.GetPagedAsync(pageNumber, pageSize);
+
+        return new PagedResult<TDto>
+        {
+            Items = mapper.Map<List<TDto>>(items),
+            TotalCount = totalCount,
+            PageNumber = pageNumber,
+            PageSize = pageSize
+        };
     }
 
     public virtual async Task<TDto?> GetByIdAsync(long id)

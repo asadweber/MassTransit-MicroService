@@ -86,6 +86,26 @@ public class ProductServiceTests
     }
 
     [Fact]
+    public async Task GetPagedAsync_ReturnsMappedItemsAndTotalCount()
+    {
+        var products = new List<Product>
+        {
+            new() { Id = 1, Name = "Widget" },
+            new() { Id = 2, Name = "Gadget" }
+        };
+        _productRepo.Setup(r => r.GetPagedAsync(1, 2))
+            .ReturnsAsync(((IReadOnlyList<Product>)products, 5));
+
+        var result = await _sut.GetPagedAsync(1, 2);
+
+        result.TotalCount.Should().Be(5);
+        result.PageNumber.Should().Be(1);
+        result.PageSize.Should().Be(2);
+        result.Items.Should().HaveCount(2);
+        result.TotalPages.Should().Be(3);
+    }
+
+    [Fact]
     public async Task GetAllAsync_RepositoryThrows_PropagatesException()
     {
         _productRepo.Setup(r => r.GetAllAsync()).ThrowsAsync(new InvalidOperationException("db failure"));

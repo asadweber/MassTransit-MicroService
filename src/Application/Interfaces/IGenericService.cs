@@ -1,8 +1,12 @@
+using Application.Dtos;
+
 namespace Application.Interfaces;
 
 public interface IGenericService<TDto> where TDto : class
 {
     Task<List<TDto>> GetAllAsync();
+
+    Task<PagedResult<TDto>> GetPagedAsync(int pageNumber, int pageSize);
 
     Task<TDto?> GetByIdAsync(long id);
 
